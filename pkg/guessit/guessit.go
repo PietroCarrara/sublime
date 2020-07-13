@@ -3,6 +3,7 @@ package guessit
 import (
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Patterns taken (and modified) from:
@@ -10,7 +11,7 @@ import (
 
 func init() {
 	reSeason = regexp.MustCompile(`(?i)(s?([0-9]{1,2}))[ex]`)
-	reEpisode = regexp.MustCompile(`(?i)([ex]([0-9]{2})(?:[^0-9]|$))`)
+	reEpisode = regexp.MustCompile(`(?i)([ex]([0-9]{2}))(?:[^0-9]|$)`)
 	reYear = regexp.MustCompile(`(?i)\b([\[\(]?(\d{4})[\]\)]?)\b`)
 	reResolution = regexp.MustCompile(`(?i)\b([0-9]{3,4}p)\b`)
 	reRelease = regexp.MustCompile(`(?i)\b((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|hdtv|telesync)\b`)
@@ -77,14 +78,18 @@ type Information struct {
 	Unrated      bool   // Has the media not been rated for age restricions?
 	Size         string // Media size (900MB, 1.3 GB). "" if none
 	ThreeD       bool   // Is the media 3D?
+
+	Rest []string // Information that couldn't be interpreted
 }
 
 // Parse parses a string extraction information in it
 func Parse(str string) (*Information, error) {
 	res := Information{}
 
-	seasonMatch := reSeason.FindStringSubmatchIndex(str)
-	if seasonStr := getNthGroup(str, seasonMatch, 2); seasonStr != "" {
+	seasonMatchGroups := reSeason.FindStringSubmatchIndex(str)
+	var seasonMatch []int
+	if seasonStr := getNthGroup(str, seasonMatchGroups, 2); seasonStr != "" {
+		seasonMatch = seasonMatchGroups[2:4]
 		season, err := strconv.Atoi(seasonStr)
 		if err != nil {
 			return nil, err
@@ -92,8 +97,10 @@ func Parse(str string) (*Information, error) {
 		res.Season = season
 	}
 
-	episodeMatch := reEpisode.FindStringSubmatchIndex(str)
-	if episodeStr := getNthGroup(str, episodeMatch, 2); episodeStr != "" {
+	episodeMatchGroups := reEpisode.FindStringSubmatchIndex(str)
+	var episodeMatch []int
+	if episodeStr := getNthGroup(str, episodeMatchGroups, 2); episodeStr != "" {
+		episodeMatch = episodeMatchGroups[2:4]
 		episode, err := strconv.Atoi(episodeStr)
 		if err != nil {
 			return nil, err
@@ -103,8 +110,10 @@ func Parse(str string) (*Information, error) {
 
 	// Find last occurrance of a year
 	yearMatchAll := reYear.FindAllStringIndex(str, -1)
+	var yearMatch []int
 	if len(yearMatchAll) > 0 {
-		if yearStr := getNthGroup(str, yearMatchAll[len(yearMatchAll)-1], 0); yearStr != "" {
+		yearMatch = yearMatchAll[len(yearMatchAll)-1]
+		if yearStr := getNthGroup(str, yearMatch, 0); yearStr != "" {
 			year, err := strconv.Atoi(yearStr)
 			if err != nil {
 				return nil, err
@@ -125,8 +134,12 @@ func Parse(str string) (*Information, error) {
 	audioCodecMatch := reAudioCodec.FindStringIndex(str)
 	res.AudioCodec = getNthGroup(str, audioCodecMatch, 0)
 
-	groupMatch := reGroup.FindStringSubmatchIndex(str)
-	res.Group = getNthGroup(str, groupMatch, 2)
+	groupMatchGroups := reGroup.FindStringSubmatchIndex(str)
+	var groupMatch []int
+	if groupMatchGroups != nil {
+		groupMatch = groupMatchGroups[:2]
+	}
+	res.Group = getNthGroup(str, groupMatchGroups, 2)
 
 	regionMatch := reRegion.FindStringIndex(str)
 	res.Region = getNthGroup(str, regionMatch, 0)
@@ -153,8 +166,12 @@ func Parse(str string) (*Information, error) {
 	widescreenMatch := reWidescreen.FindStringIndex(str)
 	res.Proper = widescreenMatch != nil
 
-	websiteMatch := reWebsite.FindStringIndex(str)
-	res.Website = getNthGroup(str, websiteMatch, 2)
+	websiteMatchGroups := reWebsite.FindStringSubmatchIndex(str)
+	var websiteMatch []int
+	if websiteMatchGroups != nil {
+		websiteMatch = websiteMatchGroups[:2]
+	}
+	res.Website = getNthGroup(str, websiteMatchGroups, 2)
 
 	unratedMatch := reUnrated.FindStringIndex(str)
 	res.Unrated = unratedMatch != nil
@@ -164,6 +181,45 @@ func Parse(str string) (*Information, error) {
 
 	threeDMatch := reThreeD.FindStringIndex(str)
 	res.ThreeD = threeDMatch != nil
+
+	// Join all the regex matches into a interval union
+	intervals := intervalsFromPairs([][]int{
+		seasonMatch,
+		episodeMatch,
+		yearMatch,
+		resolutionMatch,
+		releaseMatch,
+		videoCodecMatch,
+		audioCodecMatch,
+		groupMatch,
+		regionMatch,
+		extendedMatch,
+		directorsCutMatch,
+		hardcodedMatch,
+		properMatch,
+		containerMatch,
+		repackMatch,
+		widescreenMatch,
+		websiteMatch,
+		unratedMatch,
+		sizeMatch,
+		threeDMatch,
+	})
+	intervals = joinIntervals(intervals)
+
+	// Remove all the characters that were present in
+	// a regex match
+	str = stripString(str, intervals)
+
+	str = strings.ReplaceAll(str, "()", "  ")
+	str = strings.ReplaceAll(str, "[]", "  ")
+	str = strings.ReplaceAll(str, ".", " ")
+	str = strings.Trim(str, " \r\t\n")
+	// Find first two spaces and stop the string there
+	if index := strings.Index(str, "  "); index > 0 {
+		res.Rest = strings.Fields(str[index:])
+		str = str[:index]
+	}
 
 	return &res, nil
 }
@@ -177,4 +233,16 @@ func getNthGroup(str string, indexPairs []int, group int) string {
 		return ""
 	}
 	return str[indexPairs[group*2]:indexPairs[group*2+1]]
+}
+
+// stripString removes characters which index is contained in the intervals.
+// The intervals must be non-overlapping and the start of the nth interval
+// must never be greater than the (n+1)th interval (they are sorted by their start)
+func stripString(str string, arr []interval) string {
+	removedChars := 0
+	for _, interval := range arr {
+		str = str[:interval.start-removedChars] + str[interval.end-removedChars:]
+		removedChars += interval.len()
+	}
+	return str
 }

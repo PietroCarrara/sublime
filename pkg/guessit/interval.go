@@ -10,6 +10,10 @@ type interval struct {
 	end   int
 }
 
+func (i interval) len() int {
+	return i.end - i.start
+}
+
 // joinIntervals joins all intervals into a single interval array, with no overlap
 func joinIntervals(r []interval) []interval {
 	sorted := make([]interval, len(r))
@@ -24,6 +28,7 @@ func joinIntervals(r []interval) []interval {
 
 // joinSortedIntervals joins all intervals into a single interval array, with no overlap,
 // as long as the start of the nth interval is never greater than the (n+1)th interval
+// (they are sorted by their start)
 func joinSortedIntervals(r []interval) []interval {
 	if len(r) == 1 {
 		return r
@@ -74,6 +79,19 @@ func joinTwoIntervals(a, b interval) []interval {
 	}
 
 	return []interval{a, b}
+}
+
+func intervalsFromPairs(pairs [][]int) []interval {
+	res := []interval{}
+	for _, pair := range pairs {
+		if len(pair) == 2 {
+			res = append(res, interval{
+				start: pair[0],
+				end:   pair[1],
+			})
+		}
+	}
+	return res
 }
 
 func min(a, b int) int {
