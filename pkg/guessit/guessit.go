@@ -30,6 +30,10 @@ func init() {
 	reUnrated = regexp.MustCompile(`(?i)\bUNRATED\b`)
 	reSize = regexp.MustCompile(`(?i)\b(\d+(?:\.\d+)?(?:GB|MB))\b`)
 	reThreeD = regexp.MustCompile(`(?i)\b3D\b`)
+
+	reRemoveDotsLeft = regexp.MustCompile(`(?i)([ \.])([^ \.]{2,})`)
+	reRemoveDotsRight = regexp.MustCompile(`(?i)([^ \.]{2,})([ \.])`)
+	reTwoSeparators = regexp.MustCompile(`(?i)[\. ]{2,}`)
 }
 
 var (
@@ -53,6 +57,10 @@ var (
 	reUnrated      *regexp.Regexp
 	reSize         *regexp.Regexp
 	reThreeD       *regexp.Regexp
+
+	reRemoveDotsLeft  *regexp.Regexp
+	reRemoveDotsRight *regexp.Regexp
+	reTwoSeparators   *regexp.Regexp
 )
 
 // Information holds data regarding a media release
@@ -213,13 +221,18 @@ func Parse(str string) (*Information, error) {
 
 	str = strings.ReplaceAll(str, "()", "  ")
 	str = strings.ReplaceAll(str, "[]", "  ")
-	str = strings.ReplaceAll(str, ".", " ")
+	str = strings.ReplaceAll(str, "_", " ")
 	str = strings.Trim(str, " \r\t\n")
-	// Find first two spaces and stop the string there
-	if index := strings.Index(str, "  "); index > 0 {
-		res.Rest = strings.Fields(str[index:])
-		str = str[:index]
+
+	str = reRemoveDotsLeft.ReplaceAllString(str, " $2")
+	str = reRemoveDotsRight.ReplaceAllString(str, "$1 ")
+
+	// Find first two separators and stop the string there
+	if index := reTwoSeparators.FindStringIndex(str); len(index) > 0 {
+		res.Rest = strings.Fields(str[index[0]:])
+		str = str[:index[0]]
 	}
+	res.Title = str
 
 	return &res, nil
 }
