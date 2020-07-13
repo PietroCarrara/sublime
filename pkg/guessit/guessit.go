@@ -1,7 +1,6 @@
 package guessit
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -84,8 +83,6 @@ type Information struct {
 func Parse(str string) (*Information, error) {
 	res := Information{}
 
-	fmt.Printf("str: %s\n", str)
-
 	seasonMatch := reSeason.FindStringSubmatchIndex(str)
 	if seasonStr := getNthGroup(str, seasonMatch, 2); seasonStr != "" {
 		season, err := strconv.Atoi(seasonStr)
@@ -94,7 +91,6 @@ func Parse(str string) (*Information, error) {
 		}
 		res.Season = season
 	}
-	fmt.Printf("Season: %d\n", res.Season)
 
 	episodeMatch := reEpisode.FindStringSubmatchIndex(str)
 	if episodeStr := getNthGroup(str, episodeMatch, 2); episodeStr != "" {
@@ -104,9 +100,8 @@ func Parse(str string) (*Information, error) {
 		}
 		res.Episode = episode
 	}
-	fmt.Printf("Episode: %d\n", res.Episode)
 
-	// Find last occurrance of the year
+	// Find last occurrance of a year
 	yearMatchAll := reYear.FindAllStringIndex(str, -1)
 	if len(yearMatchAll) > 0 {
 		if yearStr := getNthGroup(str, yearMatchAll[len(yearMatchAll)-1], 0); yearStr != "" {
@@ -117,7 +112,6 @@ func Parse(str string) (*Information, error) {
 			res.Year = year
 		}
 	}
-	fmt.Printf("Year: %d\n", res.Year)
 
 	resolutionMatch := reResolution.FindStringIndex(str)
 	res.Resolution = getNthGroup(str, resolutionMatch, 0)
