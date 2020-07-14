@@ -32,6 +32,7 @@ type FileTarget struct {
 	path string
 }
 
+// NewFileTarget creates a new FileTarget
 func NewFileTarget(path string) *FileTarget {
 	return &FileTarget{
 		path: path,
