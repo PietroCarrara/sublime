@@ -91,29 +91,27 @@ type Information struct {
 }
 
 // Parse parses a string extraction information in it
-func Parse(str string) (*Information, error) {
+func Parse(str string) Information {
 	res := Information{}
 
 	seasonMatchGroups := reSeason.FindStringSubmatchIndex(str)
 	var seasonMatch []int
 	if seasonStr := getNthGroup(str, seasonMatchGroups, 2); seasonStr != "" {
-		seasonMatch = seasonMatchGroups[2:4]
 		season, err := strconv.Atoi(seasonStr)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			seasonMatch = seasonMatchGroups[2:4]
+			res.Season = season
 		}
-		res.Season = season
 	}
 
 	episodeMatchGroups := reEpisode.FindStringSubmatchIndex(str)
 	var episodeMatch []int
 	if episodeStr := getNthGroup(str, episodeMatchGroups, 2); episodeStr != "" {
-		episodeMatch = episodeMatchGroups[2:4]
 		episode, err := strconv.Atoi(episodeStr)
-		if err != nil {
-			return nil, err
+		if err == nil {
+			episodeMatch = episodeMatchGroups[2:4]
+			res.Episode = episode
 		}
-		res.Episode = episode
 	}
 
 	// Find last occurrance of a year
@@ -123,10 +121,11 @@ func Parse(str string) (*Information, error) {
 		yearMatch = yearMatchAll[len(yearMatchAll)-1]
 		if yearStr := getNthGroup(str, yearMatch, 0); yearStr != "" {
 			year, err := strconv.Atoi(yearStr)
-			if err != nil {
-				return nil, err
+			if err == nil {
+				res.Year = year
+			} else {
+				yearMatch = nil
 			}
-			res.Year = year
 		}
 	}
 
@@ -234,7 +233,7 @@ func Parse(str string) (*Information, error) {
 	}
 	res.Title = str
 
-	return &res, nil
+	return res
 }
 
 // getNthGroup returns the string in the nth capture group

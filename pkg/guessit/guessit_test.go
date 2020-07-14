@@ -143,13 +143,9 @@ func TestParse(t *testing.T) {
 	t.Parallel()
 
 	for filename, target := range testCases {
-		value, err := Parse(filename)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
+		value := Parse(filename)
 
-		if !assertEqualsInformation(t, filename, target, *value) {
+		if !assertEqualsInformation(t, filename, target, value) {
 			t.Logf(`(case: "%s") value.Rest => %#v`, filename, value.Rest)
 		}
 	}
