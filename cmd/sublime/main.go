@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,9 +17,9 @@ import (
 
 var argLangList = flag.String("language", "", "comma-separated language list for subtitles")
 var argServiceList = flag.String("service", "", "comma-separated service list for subtitles")
+var argConfigList = flag.String("config", "", `space-separated list of config values to set in the form service.option=my\ value`)
 
 func main() {
-
 	flag.Parse()
 
 	languages := getLanguages(*argLangList)
@@ -35,6 +36,11 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("%#v\n", services)
+
+	err = configServices(*argConfigList)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// chans := make([]chan SubtitleCandidate, len(services))
 	// for i in chans:
@@ -128,6 +134,66 @@ func getServicesOrAll(services string) ([]sublime.Service, error) {
 		i++
 	}
 	return res, nil
+}
+
+var separationRegex = regexp.MustCompile(`[^\\] `)
+
+func configServices(list string) error {
+	list = strings.Trim(list, " \n\r\t")
+
+	if len(list) == 0 {
+		return nil
+	}
+
+	seps := separationRegex.FindAllStringIndex(list, -1)
+
+	last := 0
+	for _, slice := range seps {
+		opt := list[last : slice[0]+1]
+
+		if err := setConfig(opt); err != nil {
+			return err
+		}
+
+		last = slice[1]
+	}
+	if err := setConfig(list[last:]); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Sets a config value in a service using a string in the form:
+// service.config=value
+func setConfig(config string) error {
+	log.Println(config)
+
+	parts := strings.SplitN(config, ".", 2)
+
+	if len(parts) != 2 {
+		return fmt.Errorf(`config string "%s" not propperly formatted`, config)
+	}
+
+	service := parts[0]
+	rest := parts[1]
+
+	parts = strings.SplitN(rest, "=", 2)
+
+	if len(parts) != 2 {
+		return fmt.Errorf(`config string "%s" not propperly formatted`, config)
+	}
+
+	key := parts[0]
+	value := parts[1]
+
+	if s, ok := sublime.Services[service]; ok {
+		s.SetConfig(key, value)
+	} else {
+		return fmt.Errorf(`service "%s" was not found`, service)
+	}
+
+	return nil
 }
 
 /**

@@ -24,6 +24,10 @@ type SubtitleCandidate interface {
 type Service interface {
 	// For each FileTarget, returns candidates of all of the possible languages
 	GetCandidatesForFiles([]*FileTarget, []language.Tag) ([]SubtitleCandidate, error)
+	// Configure values. No costly/long operations should be performed
+	SetConfig(name, value string) error
+	// Initialize the service
+	Initialize() error
 }
 
 // FileTarget represents a video that contains information
