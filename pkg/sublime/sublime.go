@@ -22,8 +22,10 @@ type SubtitleCandidate interface {
 
 // Service knows how to get candidates for FileTargets and Languages
 type Service interface {
+	// Returns a string identifying this service. Should be all lowercase
+	GetName() string
 	// For each FileTarget, returns candidates of all of the possible languages
-	GetCandidatesForFiles([]*FileTarget, []language.Tag) ([]SubtitleCandidate, error)
+	GetCandidatesForFiles([]*FileTarget, []language.Tag) <-chan SubtitleCandidate
 	// Configure values. No costly/long operations should be performed
 	SetConfig(name, value string) error
 	// Initialize the service

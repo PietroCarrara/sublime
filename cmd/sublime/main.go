@@ -13,6 +13,9 @@ import (
 	"github.com/PietroCarrara/sublime/pkg/sublime"
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
+
+	// Implemented services:
+	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/legendastv"
 )
 
 var argLangList = flag.String("language", "", "comma-separated language list for subtitles")
@@ -42,11 +45,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// chans := make([]chan SubtitleCandidate, len(services))
-	// for i in chans:
-	//     chans[i] = services[i].getCandidatesForFiles(files, lang)
+	for _, s := range services {
+		err := s.Initialize()
+		if err != nil {
+			log.Fatal(fmt.Errorf("%s: %s", s.GetName(), err))
+		}
+	}
 
-	// channel := unifyChannels(chans)
+	chans := make([]<-chan sublime.SubtitleCandidate, len(services))
+	for i := range chans {
+		chans[i] = services[i].GetCandidatesForFiles(targets, languages)
+	}
+
+	channel := unifyChannels(chans)
+	log.Printf("%#v\n", channel)
 
 	// best := map[FileTarget]*SubtitleCandidate
 	// for sub in channel:
@@ -167,7 +179,6 @@ func configServices(list string) error {
 // Sets a config value in a service using a string in the form:
 // service.config=value
 func setConfig(config string) error {
-	log.Println(config)
 
 	parts := strings.SplitN(config, ".", 2)
 
@@ -188,7 +199,10 @@ func setConfig(config string) error {
 	value := parts[1]
 
 	if s, ok := sublime.Services[service]; ok {
-		s.SetConfig(key, value)
+		err := s.SetConfig(key, value)
+		if err != nil {
+			return fmt.Errorf("%s: %s", service, err)
+		}
 	} else {
 		return fmt.Errorf(`service "%s" was not found`, service)
 	}
@@ -200,18 +214,29 @@ func setConfig(config string) error {
 func greater(target, a, b Information) int {
 	// Returns wheter a > b when matching against target
 }
+**/
 
-func unifyChannels([]chan SubtitleCandidate) chan-> SubtitleCandidate {
-	for chan...
-		go select sub, ok := <-c {
-			if ok {
-				res <- sub
-			} else {
-				totalOpenChannels--
-				if totalOpenChannels <= 0 {
-					close(res)
+func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.SubtitleCandidate {
+	res := make(chan sublime.SubtitleCandidate)
+	totalOpenChannels := len(channels)
+
+	for _, c := range channels {
+		go func() {
+			for {
+				sub, ok := <-c
+
+				if ok {
+					res <- sub
+				} else {
+					totalOpenChannels--
+					if totalOpenChannels <= 0 {
+						close(res)
+						return
+					}
 				}
 			}
-		}
+		}()
+	}
+
+	return res
 }
-**/
