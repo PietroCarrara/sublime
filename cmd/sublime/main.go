@@ -27,19 +27,16 @@ func main() {
 	flag.Parse()
 
 	languages := getLanguages(*argLangList)
-	log.Printf("%v\n", languages)
 
 	targets, err := getTargets(flag.Arg(flag.NArg() - 1))
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%#v\n", targets)
 
 	services, err := getServicesOrAll(*argServiceList)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%#v\n", services)
 
 	err = configServices(*argConfigList)
 	if err != nil {
@@ -59,7 +56,6 @@ func main() {
 	}
 
 	channel := unifyChannels(chans)
-	log.Printf("%#v\n", channel)
 
 	best := make(map[*sublime.FileTarget]sublime.SubtitleCandidate)
 	for sub := range channel {
@@ -234,6 +230,7 @@ func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.S
 	totalOpenChannels := len(channels)
 
 	for _, c := range channels {
+		c := c
 		go func() {
 			for {
 				sub, ok := <-c
