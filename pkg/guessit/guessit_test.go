@@ -137,6 +137,15 @@ var testCases = map[string]Information{
 		VideoCodec: "x264",
 		Group:      "FoV",
 	},
+	"Battlestar.Galactica.S04E19E20E21.EXTENDED.BDRip.x264-FGT.pt-BR": {
+		Title:      "Battlestar Galactica",
+		Season:     4,
+		Episode:    19,
+		Extended:   true,
+		Release:    "BDRip",
+		VideoCodec: "x264",
+		Group:      "FGT",
+	},
 }
 
 func TestParse(t *testing.T) {
