@@ -14,6 +14,25 @@ import (
 	"golang.org/x/text/language"
 )
 
+var languagesID = map[language.Tag]int{
+	language.BrazilianPortuguese: 1,
+	language.English:             2,
+	language.Spanish:             3,
+	language.French:              4,
+	language.German:              5,
+	language.Japanese:            6,
+	language.Danish:              7,
+	language.Norwegian:           8,
+	language.Swedish:             9,
+	language.EuropeanPortuguese:  10,
+	language.Czech:               12,
+	language.Chinese:             13,
+	language.Korean:              14,
+	language.Bulgarian:           15,
+	language.Italian:             16,
+	language.Polish:              17,
+}
+
 func init() {
 	l := &LegendastvService{}
 
@@ -97,9 +116,15 @@ func (l *LegendastvService) GetCandidatesForFiles(files []*sublime.FileTarget, l
 		titles[info.Title] = append(titles[info.Title], file)
 	}
 
-	for _, title := range titles {
-		wait.Add(1)
-		go downloadTitle(title, out, l.session, &wait)
+	for _, lang := range languages {
+		if id, ok := languagesID[lang]; ok {
+			for _, title := range titles {
+				wait.Add(1)
+				go downloadTitle(title, id, out, l.session, &wait)
+			}
+		} else {
+			log.Printf(`legendastv: language "%s" is not supported`, lang)
+		}
 	}
 
 	go func() {
@@ -112,7 +137,7 @@ func (l *LegendastvService) GetCandidatesForFiles(files []*sublime.FileTarget, l
 
 // downloadTitle downloads subtitles for all of the targets, as long as they
 // are from the same movie/tv show
-func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	seasons := make(map[int][]*sublime.FileTarget)
 	ourWait := sync.WaitGroup{}
 
@@ -120,7 +145,7 @@ func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandi
 		info := file.GetInfo()
 		if info.Season == 0 && info.Episode == 0 {
 			ourWait.Add(1)
-			go downloadMovie(file, out, c, &ourWait)
+			go downloadMovie(file, langID, out, c, &ourWait)
 		} else if info.Season == 0 {
 			seasons[1] = append(seasons[1], file)
 		} else {
@@ -130,7 +155,7 @@ func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandi
 
 	for _, files := range seasons {
 		ourWait.Add(1)
-		go downloadSeason(files, out, c, &ourWait)
+		go downloadSeason(files, langID, out, c, &ourWait)
 	}
 
 	ourWait.Wait()
@@ -138,7 +163,7 @@ func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandi
 }
 
 // downloadMovie a subtitle for a movie
-func downloadMovie(file *sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+func downloadMovie(file *sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	// TODO: Implement
 	entry, err := getEntry(c, file.GetInfo())
 	if err != nil {
@@ -151,7 +176,7 @@ func downloadMovie(file *sublime.FileTarget, out chan<- sublime.SubtitleCandidat
 
 // downloadSeason downloads subtitles for many files, as long as they
 // are from the same tv show and season
-func downloadSeason(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+func downloadSeason(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	// TODO: Implement
 	if len(files) > 0 {
 		entry, err := getEntry(c, files[0].GetInfo())
