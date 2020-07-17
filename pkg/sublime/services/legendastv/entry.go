@@ -2,20 +2,28 @@ package legendastv
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Jeffail/gabs/v2"
 	"github.com/PietroCarrara/sublime/pkg/guessit"
+	"github.com/PuerkitoBio/goquery"
 )
 
-type mediaType int
+type mediaType string
+type subType string
 
 const (
-	mediaTypeMovie mediaType = iota
-	mediaTypeShow
+	mediaTypeMovie mediaType = "M"
+	mediaTypeShow  mediaType = "S"
+
+	subTypeDefault   subType = "-"
+	subTypeHighlight subType = "d"
+	subTypePack      subType = "p"
 )
 
 type entry struct {
@@ -23,6 +31,12 @@ type entry struct {
 	Title  string
 	Season int
 	Type   mediaType
+}
+
+type subtitle struct {
+	ID    string
+	Title string
+	Type  subType
 }
 
 func getEntry(client *http.Client, info guessit.Information) (*entry, error) {
@@ -57,7 +71,7 @@ func getEntry(client *http.Client, info guessit.Information) (*entry, error) {
 
 		// TODO: More forgiving way to match the title
 		if strings.ToLower(data["dsc_nome"]) == strings.ToLower(info.Title) {
-			entry, err := (entryFromFields(data["id_filme"], data["dsc_nome"], data["temporada"], data["tipo"]))
+			entry, err := entryFromFields(data["id_filme"], data["dsc_nome"], data["temporada"], data["tipo"])
 			if err != nil {
 				return nil, err
 			}
@@ -107,4 +121,64 @@ func entryFromFields(id, title, season, typ string) (*entry, error) {
 		Title:  title,
 		Type:   Type,
 	}, nil
+}
+
+var subIDRegex = regexp.MustCompile(`(?i)/download/([\w\d]+)/`)
+
+func (e entry) ListSubtitles(client *http.Client, typ subType, languageID int) ([]subtitle, error) {
+	page := 0
+	res := make([]subtitle, 0)
+
+	for {
+		url := fmt.Sprintf(
+			"http://legendas.tv/legenda/busca/-/%d/%s/%d/%d",
+			languageID,
+			typ,
+			page,
+			e.ID,
+		)
+
+		r, err := client.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Body.Close()
+
+		doc, err := goquery.NewDocumentFromReader(r.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		doc.Find(".gallery > article > div").Each(func(i int, element *goquery.Selection) {
+			title := element.Find("p:not(.data) > a").Text()
+			href, ok := element.Find("p:not(.data) > a").Attr("href")
+			if !ok {
+				log.Printf(`legendastv: couldn't find subtitle download link for subtitle "%s"`, title)
+				return
+			}
+
+			submatches := subIDRegex.FindStringSubmatch(href)
+			if len(submatches) < 2 {
+				log.Printf(`legendastv: couldn't find subtitle download link for subtitle "%s"`, title)
+			}
+			id := submatches[1]
+
+			typ := subTypeDefault
+			if element.HasClass("pack") {
+				typ = subTypePack
+			} else if element.HasClass("destaque") {
+				typ = subTypeHighlight
+			}
+
+			res = append(res, subtitle{
+				ID:    id,
+				Title: title,
+				Type:  typ,
+			})
+		})
+
+		break
+	}
+
+	return res, nil
 }
