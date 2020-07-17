@@ -7,6 +7,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/PietroCarrara/sublime/pkg/sublime"
 	"golang.org/x/text/language"
@@ -22,7 +23,7 @@ type LegendastvService struct {
 	username string
 	password string
 
-	session http.Client
+	session *http.Client
 }
 
 func (l *LegendastvService) GetName() string {
@@ -48,17 +49,19 @@ func (l *LegendastvService) Initialize() error {
 		return errors.New("username and password are required")
 	}
 
+	// Setup session
 	cookies, err := cookiejar.New(nil)
 	if err != nil {
 		return err
 	}
-	l.session = http.Client{
+	l.session = &http.Client{
 		Jar: cookies,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 
+	// Login on session
 	req, err := http.NewRequest("POST", "http://legendas.tv/login", strings.NewReader(url.Values{
 		"data[User][username]": {l.username},
 		"data[User][password]": {l.password},
@@ -72,6 +75,7 @@ func (l *LegendastvService) Initialize() error {
 	if err != nil {
 		return err
 	}
+	defer r.Body.Close()
 
 	// Page rediects only on success
 	if r.StatusCode != http.StatusFound {
@@ -82,6 +86,68 @@ func (l *LegendastvService) Initialize() error {
 }
 
 func (l *LegendastvService) GetCandidatesForFiles(files []*sublime.FileTarget, languages []language.Tag) <-chan sublime.SubtitleCandidate {
+
+	out := make(chan sublime.SubtitleCandidate)
+	wait := sync.WaitGroup{}
+
+	titles := make(map[string][]*sublime.FileTarget)
+	for _, file := range files {
+		info := file.GetInfo()
+		titles[info.Title] = append(titles[info.Title], file)
+	}
+
+	for _, title := range titles {
+		wait.Add(1)
+		go downloadTitle(title, out, l.session, &wait)
+	}
+
+	go func() {
+		wait.Wait()
+		close(out)
+	}()
+
+	return out
+}
+
+// downloadTitle downloads subtitles for all of the targets, as long as they
+// are from the same movie/tv show
+func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+	seasons := make(map[int][]*sublime.FileTarget)
+	ourWait := sync.WaitGroup{}
+
+	for _, file := range files {
+		info := file.GetInfo()
+		if info.Season == 0 && info.Episode == 0 {
+			ourWait.Add(1)
+			go downloadMovie(file, out, c, &ourWait)
+		} else if info.Season == 0 {
+			seasons[1] = append(seasons[1], file)
+		} else {
+			seasons[info.Season] = append(seasons[info.Season], file)
+		}
+	}
+
+	for _, files := range seasons {
+		ourWait.Add(1)
+		go downloadSeason(files, out, c, &ourWait)
+	}
+
+	ourWait.Wait()
+	wait.Done()
+}
+
+// downloadMovie a subtitle for a movie
+func downloadMovie(file *sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	// TODO: Implement
-	return nil
+	wait.Done()
+}
+
+// downloadSeason downloads subtitles for many files, as long as they
+// are from the same tv show and season
+func downloadSeason(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+	// TODO: Implement
+	if len(files) > 0 {
+
+	}
+	wait.Done()
 }

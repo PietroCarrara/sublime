@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/PietroCarrara/sublime/pkg/guessit"
 	"github.com/PietroCarrara/sublime/pkg/sublime"
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
@@ -60,18 +61,19 @@ func main() {
 	channel := unifyChannels(chans)
 	log.Printf("%#v\n", channel)
 
-	// best := map[FileTarget]*SubtitleCandidate
-	// for sub in channel:
-	//     f := sub.GetFileTarget()
-	//     if best[f] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f].GetInfo()) {
-	//          best[f] = &sub
-	//     }
+	best := make(map[*sublime.FileTarget]sublime.SubtitleCandidate)
+	for sub := range channel {
+		f := sub.GetFileTarget()
+		if best[f] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f].GetInfo()) {
+			best[f] = sub
+		}
+	}
 
-	// for f, sub := range best{
-	// stream = sub.GetStream()
-	// defer stream.Close()
-	// f.SaveSubtitle(stream)
-	//}
+	for f, sub := range best {
+		stream := sub.GetStream()
+		defer stream.Close()
+		f.SaveSubtitle(stream, sub.GetLang())
+	}
 }
 
 func getLanguages(langs string) []language.Tag {
@@ -210,11 +212,22 @@ func setConfig(config string) error {
 	return nil
 }
 
-/**
-func greater(target, a, b Information) int {
-	// Returns wheter a > b when matching against target
+// greater returns wether A is a better match than B is
+// when compared to target
+func greater(target, a, b guessit.Information) bool {
+	if l(target.Release) == l(a.Release) && l(target.Release) != l(b.Release) {
+		return true
+	}
+
+	// TODO: Better classification
+
+	return false
 }
-**/
+
+// alias to strings.ToLower
+func l(s string) string {
+	return strings.ToLower(s)
+}
 
 func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.SubtitleCandidate {
 	res := make(chan sublime.SubtitleCandidate)
