@@ -3,6 +3,7 @@ package legendastv
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -139,6 +140,12 @@ func downloadTitle(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandi
 // downloadMovie a subtitle for a movie
 func downloadMovie(file *sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	// TODO: Implement
+	entry, err := getEntry(c, file.GetInfo())
+	if err != nil {
+		log.Printf("legendastv: %s", err)
+	} else {
+		log.Println(*entry)
+	}
 	wait.Done()
 }
 
@@ -147,7 +154,12 @@ func downloadMovie(file *sublime.FileTarget, out chan<- sublime.SubtitleCandidat
 func downloadSeason(files []*sublime.FileTarget, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
 	// TODO: Implement
 	if len(files) > 0 {
-
+		entry, err := getEntry(c, files[0].GetInfo())
+		if err != nil {
+			log.Printf("legendastv: %s", err)
+		} else {
+			log.Println(*entry)
+		}
 	}
 	wait.Done()
 }
