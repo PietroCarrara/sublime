@@ -146,6 +146,16 @@ var testCases = map[string]Information{
 		VideoCodec: "x264",
 		Group:      "FGT",
 	},
+	"THX.1138.1971.Directors.Cut.1080p.BluRay.H264.AAC-RARBG": {
+		Title:        "THX 1138",
+		Year:         1971,
+		DirectorsCut: true,
+		Resolution:   "1080p",
+		Release:      "BluRay",
+		VideoCodec:   "H264",
+		AudioCodec:   "AAC",
+		Group:        "RARBG",
+	},
 }
 
 func TestParse(t *testing.T) {
