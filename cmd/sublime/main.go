@@ -58,17 +58,35 @@ func main() {
 	channel := unifyChannels(chans)
 
 	best := make(map[*sublime.FileTarget]sublime.SubtitleCandidate)
+	count := 0
 	for sub := range channel {
+		count++
+		fmt.Printf("\rEvaluating %d subtitles...", count)
+
 		f := sub.GetFileTarget()
 		if best[f] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f].GetInfo()) {
 			best[f] = sub
 		}
 	}
+	fmt.Println()
 
-	for f, sub := range best {
-		stream := sub.GetStream()
-		defer stream.Close()
-		f.SaveSubtitle(stream, sub.GetLang())
+	for _, f := range targets {
+		if sub, ok := best[f]; ok {
+			stream, err := sub.Open()
+			if err != nil {
+				log.Printf(`could not download subtitle for "%s": %s`, f, err)
+				if stream != nil {
+					stream.Close()
+				}
+				fmt.Printf("%s: ✗\n", f)
+				continue
+			}
+			defer stream.Close()
+			f.SaveSubtitle(stream, sub.GetLang())
+			fmt.Printf("%s: ✓\n", f)
+		} else {
+			fmt.Printf("%s: ✗\n", f)
+		}
 	}
 }
 

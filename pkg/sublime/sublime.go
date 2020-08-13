@@ -1,8 +1,12 @@
 package sublime
 
 import (
+	"fmt"
 	"io"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/PietroCarrara/sublime/pkg/guessit"
 	"golang.org/x/text/language"
@@ -17,7 +21,7 @@ type SubtitleCandidate interface {
 	GetFileTarget() *FileTarget
 	GetLang() language.Tag
 	GetInfo() guessit.Information
-	GetStream() io.ReadCloser
+	Open() (io.ReadCloser, error)
 }
 
 // Service knows how to get candidates for FileTargets and Languages
@@ -53,6 +57,18 @@ func (f FileTarget) GetInfo() guessit.Information {
 
 // SaveSubtitle saves a subtitle next to the video file
 func (f FileTarget) SaveSubtitle(r io.Reader, lang language.Tag) error {
-	// TODO: Implement
-	return nil
+	name := strings.TrimSuffix(f.path, filepath.Ext(f.path))
+	name = fmt.Sprintf("%s.%s.%s", name, lang, "srt") // TODO: Don't assume srt format
+
+	file, err := os.Create(name)
+	if err != nil {
+		return nil
+	}
+
+	_, err = io.Copy(file, r)
+	return err
+}
+
+func (f FileTarget) String() string {
+	return f.path
 }
