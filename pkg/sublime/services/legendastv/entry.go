@@ -2,6 +2,7 @@ package legendastv
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,25 +22,25 @@ const (
 	mediaTypeMovie mediaType = "M"
 	mediaTypeShow  mediaType = "S"
 
-	subTypeDefault   subType = "-"
+	subTypeAny       subType = "-"
 	subTypeHighlight subType = "d"
 	subTypePack      subType = "p"
 )
 
-type entry struct {
+type mediaEntry struct {
 	ID     int
 	Title  string
 	Season int
 	Type   mediaType
 }
 
-type subtitle struct {
+type subtitleEntry struct {
 	ID    string
 	Title string
 	Type  subType
 }
 
-func getEntry(client *http.Client, info guessit.Information) (*entry, error) {
+func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error) {
 	title := url.PathEscape(info.Title)
 
 	r, err := client.Get(fmt.Sprintf("http://legendas.tv/legenda/sugestao/%s", title))
@@ -91,7 +92,7 @@ func getEntry(client *http.Client, info guessit.Information) (*entry, error) {
 	return nil, err
 }
 
-func entryFromFields(id, title, season, typ string) (*entry, error) {
+func entryFromFields(id, title, season, typ string) (*mediaEntry, error) {
 	ID, err := strconv.Atoi(id)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func entryFromFields(id, title, season, typ string) (*entry, error) {
 		return nil, fmt.Errorf(`could not find media type "%s"`, typ)
 	}
 
-	return &entry{
+	return &mediaEntry{
 		ID:     ID,
 		Season: Season,
 		Title:  title,
@@ -125,9 +126,9 @@ func entryFromFields(id, title, season, typ string) (*entry, error) {
 
 var subIDRegex = regexp.MustCompile(`(?i)/download/([\w\d]+)/`)
 
-func (e entry) ListSubtitles(client *http.Client, typ subType, languageID int) ([]subtitle, error) {
+func (e mediaEntry) ListSubtitles(client *http.Client, typ subType, languageID int) ([]subtitleEntry, error) {
 	page := 0
-	res := make([]subtitle, 0)
+	res := make([]subtitleEntry, 0)
 
 	for {
 		url := fmt.Sprintf(
@@ -163,22 +164,46 @@ func (e entry) ListSubtitles(client *http.Client, typ subType, languageID int) (
 			}
 			id := submatches[1]
 
-			typ := subTypeDefault
+			typ := subTypeAny
 			if element.HasClass("pack") {
 				typ = subTypePack
 			} else if element.HasClass("destaque") {
 				typ = subTypeHighlight
 			}
 
-			res = append(res, subtitle{
+			res = append(res, subtitleEntry{
 				ID:    id,
 				Title: title,
 				Type:  typ,
 			})
 		})
 
+		// TODO: Check for the next page
 		break
 	}
 
 	return res, nil
+}
+
+func (s subtitleEntry) DownloadContents(c *http.Client) (io.ReadCloser, error) {
+	url := fmt.Sprintf("http://legendas.tv/downloadarquivo/%s", s.ID)
+
+	r, err := c.Get(url)
+	r.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	location, err := r.Location()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err = c.Get(location.String())
+	if err != nil {
+		r.Body.Close()
+		return nil, err
+	}
+
+	return r.Body, nil
 }
