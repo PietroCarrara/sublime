@@ -33,6 +33,25 @@ var languagesID = map[language.Tag]int{
 	language.Polish:              17,
 }
 
+var languagesTag = map[int]language.Tag{
+	1:  language.BrazilianPortuguese,
+	2:  language.English,
+	3:  language.Spanish,
+	4:  language.French,
+	5:  language.German,
+	6:  language.Japanese,
+	7:  language.Danish,
+	8:  language.Norwegian,
+	9:  language.Swedish,
+	10: language.EuropeanPortuguese,
+	12: language.Czech,
+	13: language.Chinese,
+	14: language.Korean,
+	15: language.Bulgarian,
+	16: language.Italian,
+	17: language.Polish,
+}
+
 func init() {
 	l := &LegendastvService{}
 
@@ -145,7 +164,7 @@ func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.S
 		info := file.GetInfo()
 		if info.Season == 0 && info.Episode == 0 {
 			ourWait.Add(1)
-			go downloadMovie(file, langID, out, c, &ourWait)
+			go downloadLegendasTV([]*sublime.FileTarget{file}, langID, out, c, &ourWait)
 		} else if info.Season == 0 {
 			seasons[1] = append(seasons[1], file)
 		} else {
@@ -155,36 +174,103 @@ func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.S
 
 	for _, files := range seasons {
 		ourWait.Add(1)
-		go downloadSeason(files, langID, out, c, &ourWait)
+		go downloadLegendasTV(files, langID, out, c, &ourWait)
 	}
 
 	ourWait.Wait()
 	wait.Done()
 }
 
-// downloadMovie a subtitle for a movie
-func downloadMovie(file *sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
-	// TODO: Implement
-	entry, err := getEntry(c, file.GetInfo())
+// downloadSeason downloads subtitles for many files, as long as they all
+// are from the same media in legendas.tv (a movie or a tv show season)
+func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+	defer wait.Done()
+
+	ourWait := sync.WaitGroup{}
+	defer ourWait.Wait()
+
+	if len(files) <= 0 {
+		return
+	}
+
+	entry, err := getEntry(c, files[0].GetInfo())
 	if err != nil {
 		log.Printf("legendastv: %s", err)
-	} else {
-		log.Println(*entry)
+		return
 	}
-	wait.Done()
+
+	subs, err := entry.ListSubtitles(c, subTypeAny, langID)
+	if err != nil {
+		log.Printf("legendastv: Error while searching subtitles: %s", err)
+		return
+	}
+
+	for _, subEntry := range subs {
+		ourWait.Add(1)
+		go func(subEntry subtitleEntry) {
+			var err error
+			switch subEntry.Type {
+			case subTypePack:
+				err = downloadSubPack(subEntry, c, out, files, langID)
+			case subTypeHighlight:
+			case subTypeAny:
+				err = downloadSubEntry(subEntry, c, out, files, langID)
+			default:
+				err = fmt.Errorf("legendastv: Subtitle '%s' has an unknown type", subEntry.Title)
+			}
+			if err != nil {
+				log.Printf("legendastv: %s", err)
+			}
+			ourWait.Done()
+		}(subEntry)
+	}
 }
 
-// downloadSeason downloads subtitles for many files, as long as they
-// are from the same tv show and season
-func downloadSeason(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
-	// TODO: Implement
-	if len(files) > 0 {
-		entry, err := getEntry(c, files[0].GetInfo())
-		if err != nil {
-			log.Printf("legendastv: %s", err)
-		} else {
-			log.Println(*entry)
+// downloadSubPack Downloads a single subtitle pack for many files, as long as they all
+// are from the same media
+func downloadSubPack(entry subtitleEntry, c *http.Client, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
+	pack := SubtitlePack{
+		subtitle: entry,
+	}
+
+	subs, err := pack.GetSubtitles(c)
+	if err != nil {
+		return err
+	}
+
+	for _, sub := range subs {
+		info := sub.GetInfo()
+
+		for _, file := range files {
+			if file.GetInfo().Episode == info.Episode {
+				sub.language = languagesTag[langID]
+				sub.target = file
+
+				out <- sub
+				break
+			}
 		}
 	}
-	wait.Done()
+
+	return nil
+}
+
+func downloadSubEntry(entry subtitleEntry, c *http.Client, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
+	sub := Subtitle{
+		c:        c,
+		subtitle: entry,
+		language: languagesTag[langID],
+	}
+	info := sub.GetInfo()
+
+	for _, file := range files {
+
+		if file.GetInfo().Episode == info.Episode {
+			sub.target = file
+			out <- sub
+			break
+		}
+	}
+
+	return nil
 }
