@@ -56,10 +56,11 @@ func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error
 
 	for _, obj := range obj.Children() {
 		data := map[string]string{
-			"id_filme":  "",
-			"dsc_nome":  "",
-			"tipo":      "",
-			"temporada": "",
+			"id_filme":    "",
+			"dsc_nome":    "",
+			"dsc_nome_br": "",
+			"tipo":        "",
+			"temporada":   "",
 		}
 
 		for field := range data {
@@ -71,10 +72,11 @@ func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error
 		}
 
 		// TODO: More forgiving way to match the title
-		if strings.ToLower(data["dsc_nome"]) == strings.ToLower(info.Title) {
+		if strings.ToLower(data["dsc_nome"]) == strings.ToLower(info.Title) || strings.ToLower(data["dsc_nome_br"]) == strings.ToLower(info.Title) {
 			entry, err := entryFromFields(data["id_filme"], data["dsc_nome"], data["temporada"], data["tipo"])
 			if err != nil {
-				return nil, err
+				log.Printf("legendastv: %s", err)
+				continue
 			}
 
 			if entry.Season == info.Season {
