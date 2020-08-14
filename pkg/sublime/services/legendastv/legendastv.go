@@ -230,7 +230,7 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 // are from the same media
 func downloadSubPack(entry subtitleEntry, c *http.Client, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
 	pack := SubtitlePack{
-		subtitle: entry,
+		entry: entry,
 	}
 
 	subs, err := pack.GetSubtitles(c)

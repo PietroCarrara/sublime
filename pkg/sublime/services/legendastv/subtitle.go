@@ -33,20 +33,21 @@ type Subtitle struct {
 // SubtitlePack is a subtitle entry that is marked as being a pack,
 // therefore containing many subtitles
 type SubtitlePack struct {
-	subtitle subtitleEntry // The pack entry
+	entry subtitleEntry // The pack entry
 }
 
 // One subtitle inside a subtitle pack
 type SubtitlePackItem struct {
-	name     string // This item's filename
-	contents []byte // This item's file contents
+	name     string        // This item's filename
+	contents []byte        // This item's file contents
+	pack     *SubtitlePack // The pack this item belongs to
 
 	language language.Tag        // The language of this subtitle
 	target   *sublime.FileTarget // The file this subtitle targets
 }
 
 func (s *SubtitlePack) downloadPack(c *http.Client) (archiver.Reader, error) {
-	r, err := s.subtitle.DownloadContents(c)
+	r, err := s.entry.DownloadContents(c)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (s *SubtitlePack) downloadPack(c *http.Client) (archiver.Reader, error) {
 	} else if bytes.HasPrefix(pack, zipMagicNumber) {
 		archive = archiver.NewZip()
 	} else {
-		return nil, fmt.Errorf(`legendastv: unknown archive format for subtitle "%s"`, s.subtitle.Title)
+		return nil, fmt.Errorf(`legendastv: unknown archive format for subtitle "%s"`, s.entry.Title)
 	}
 
 	err = archive.Open(bytes.NewReader(pack), int64(len(pack)))
@@ -73,6 +74,11 @@ func (s *SubtitlePack) downloadPack(c *http.Client) (archiver.Reader, error) {
 	}
 
 	return archive, nil
+}
+
+// GetInfo parses the pack's title to get information
+func (s SubtitlePack) GetInfo() guessit.Information {
+	return guessit.Parse(s.entry.Title)
 }
 
 // GetSubtitles downloads and extracts the archive containing the pack,
@@ -103,6 +109,7 @@ func (s *SubtitlePack) GetSubtitles(c *http.Client) ([]SubtitlePackItem, error) 
 			res = append(res, SubtitlePackItem{
 				name:     f.Name(),
 				contents: contents,
+				pack:     s,
 			})
 		} else {
 			f.Close()
@@ -123,9 +130,21 @@ func (s SubtitlePackItem) GetLang() language.Tag {
 }
 
 // GetInfo parses this subtitle's name for information
-// TODO: Inherit some of the pack's info, such as release type
 func (s SubtitlePackItem) GetInfo() guessit.Information {
-	return guessit.Parse(s.name)
+	parentInfo := s.pack.GetInfo()
+	info := guessit.Parse(s.name)
+
+	if info.Release == "" {
+		info.Release = parentInfo.Release
+	}
+	if info.Season == 0 {
+		info.Season = parentInfo.Season
+	}
+	if info.Year == 0 {
+		info.Year = parentInfo.Year
+	}
+
+	return info
 }
 
 // Open returns this subtitle's contents as a stream
