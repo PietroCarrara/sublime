@@ -176,6 +176,8 @@ func (s Subtitle) Open() (io.ReadCloser, error) {
 			return nil, err
 		}
 
+		// Loop for all of the ".srt" and ".ass" files and select the biggest
+		biggest := 0
 		for f, err := archive.Read(); err != io.EOF; f, err = archive.Read() {
 			if err != nil {
 				return nil, err
@@ -183,13 +185,17 @@ func (s Subtitle) Open() (io.ReadCloser, error) {
 
 			name := f.FileInfo.Name()
 			if strings.HasSuffix(name, ".srt") || strings.HasSuffix(name, ".ass") {
+				buff, err := ioutil.ReadAll(f.ReadCloser)
 
-				result, err = ioutil.ReadAll(f.ReadCloser)
-				f.Close()
 				if err != nil {
+					f.Close()
 					return nil, err
 				}
-				break
+
+				if len(buff) > biggest {
+					biggest = len(buff)
+					result = buff
+				}
 			}
 
 			f.Close()
