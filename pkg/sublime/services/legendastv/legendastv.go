@@ -193,36 +193,38 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 		return
 	}
 
-	entry, err := getEntry(c, files[0].GetInfo())
+	entries, err := getEntries(c, files[0].GetInfo())
 	if err != nil {
 		log.Printf("legendastv: %s", err)
 		return
 	}
 
-	subs, err := entry.ListSubtitles(c, subTypeAny, langID)
-	if err != nil {
-		log.Printf("legendastv: Error while searching subtitles: %s", err)
-		return
-	}
+	for _, entry := range entries {
+		subs, err := entry.ListSubtitles(c, subTypeAny, langID)
+		if err != nil {
+			log.Printf("legendastv: Error while searching subtitles: %s", err)
+			return
+		}
 
-	for _, subEntry := range subs {
-		ourWait.Add(1)
-		go func(subEntry subtitleEntry) {
-			var err error
-			switch subEntry.Type {
-			case subTypePack:
-				err = downloadSubPack(subEntry, c, out, files, langID)
-			case subTypeHighlight:
-			case subTypeAny:
-				err = downloadSubEntry(subEntry, c, out, files, langID)
-			default:
-				err = fmt.Errorf("legendastv: Subtitle '%s' has an unknown type", subEntry.Title)
-			}
-			if err != nil {
-				log.Printf("legendastv: %s", err)
-			}
-			ourWait.Done()
-		}(subEntry)
+		for _, subEntry := range subs {
+			ourWait.Add(1)
+			go func(subEntry subtitleEntry) {
+				var err error
+				switch subEntry.Type {
+				case subTypePack:
+					err = downloadSubPack(subEntry, c, out, files, langID)
+				case subTypeHighlight:
+				case subTypeAny:
+					err = downloadSubEntry(subEntry, c, out, files, langID)
+				default:
+					err = fmt.Errorf("legendastv: Subtitle '%s' has an unknown type", subEntry.Title)
+				}
+				if err != nil {
+					log.Printf("legendastv: %s", err)
+				}
+				ourWait.Done()
+			}(subEntry)
+		}
 	}
 }
 
@@ -267,7 +269,7 @@ func downloadSubEntry(entry subtitleEntry, c *http.Client, out chan<- sublime.Su
 
 		if file.GetInfo().Episode == info.Episode {
 			sub.target = file
-			out <- sub
+			out <- &sub
 			break
 		}
 	}

@@ -40,7 +40,9 @@ type subtitleEntry struct {
 	Type  subType
 }
 
-func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error) {
+func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, error) {
+	res := []*mediaEntry{}
+
 	title := url.PathEscape(info.Title)
 
 	r, err := client.Get(fmt.Sprintf("http://legendas.tv/legenda/sugestao/%s", title))
@@ -80,9 +82,13 @@ func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error
 			}
 
 			if entry.Season == info.Season {
-				return entry, nil
+				res = append(res, entry)
 			}
 		}
+	}
+
+	if len(res) > 0 {
+		return res, nil
 	}
 
 	if info.Season != 0 {
@@ -90,7 +96,6 @@ func getEntry(client *http.Client, info guessit.Information) (*mediaEntry, error
 	} else {
 		err = fmt.Errorf(`could not find title "%s"`, info.Title)
 	}
-
 	return nil, err
 }
 
