@@ -18,10 +18,11 @@ var Services = map[string]Service{}
 // SubtitleCandidate represents a subtitle that will be evaluated
 // and compared to others, to download the best one possible
 type SubtitleCandidate interface {
-	GetFileTarget() *FileTarget
-	GetLang() language.Tag
-	GetInfo() guessit.Information
-	Open() (io.ReadCloser, error)
+	GetFormatExtension() string   // Returns the format extension for this subtitle type (eg. "srt", "ass")
+	GetFileTarget() *FileTarget   // The file this subtitle is targeting
+	GetLang() language.Tag        // The language of this subtitle
+	GetInfo() guessit.Information // Return info about this subtitle
+	Open() (io.ReadCloser, error) // Get a stream to the subtitle used for downloading
 }
 
 // Service knows how to get candidates for FileTargets and Languages

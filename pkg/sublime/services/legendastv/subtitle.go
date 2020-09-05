@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/PietroCarrara/sublime/pkg/guessit"
@@ -36,7 +37,7 @@ type SubtitlePack struct {
 	entry subtitleEntry // The pack entry
 }
 
-// One subtitle inside a subtitle pack
+// SubtitlePackItem represents one subtitle inside a subtitle pack
 type SubtitlePackItem struct {
 	name     string        // This item's filename
 	contents []byte        // This item's file contents
@@ -119,6 +120,11 @@ func (s *SubtitlePack) GetSubtitles(c *http.Client) ([]SubtitlePackItem, error) 
 	return res, nil
 }
 
+// GetFormatExtension returns the extension in this subtitle's filename
+func (s SubtitlePackItem) GetFormatExtension() string {
+	return filepath.Ext(s.name)[1:]
+}
+
 // GetFileTarget returns this subtitle's filetarget
 func (s SubtitlePackItem) GetFileTarget() *sublime.FileTarget {
 	return s.target
@@ -152,6 +158,11 @@ func (s SubtitlePackItem) Open() (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(s.contents)), nil
 }
 
+// GetFormatExtension returns "srt" (I don't think legendas.tv supports any other subtitle type)
+func (s Subtitle) GetFormatExtension() string {
+	return "srt"
+}
+
 // GetFileTarget returns this subtitle's filetarget
 func (s Subtitle) GetFileTarget() *sublime.FileTarget {
 	return s.target
@@ -169,7 +180,7 @@ func (s Subtitle) GetInfo() guessit.Information {
 }
 
 // Open returns this subtitle's contents as a stream
-func (s Subtitle) Open() (io.ReadCloser, error) {
+func (s *Subtitle) Open() (io.ReadCloser, error) {
 	r, err := s.subtitle.DownloadContents(s.c)
 	if err != nil {
 		return nil, err
@@ -202,8 +213,8 @@ func (s Subtitle) Open() (io.ReadCloser, error) {
 				return nil, err
 			}
 
-			name := f.FileInfo.Name()
-			if strings.HasSuffix(name, ".srt") || strings.HasSuffix(name, ".ass") {
+			ext := filepath.Ext(f.FileInfo.Name())
+			if ext == ".srt" || ext == ".ass" {
 				buff, err := ioutil.ReadAll(f.ReadCloser)
 
 				if err != nil {
@@ -211,6 +222,7 @@ func (s Subtitle) Open() (io.ReadCloser, error) {
 					return nil, err
 				}
 
+				// Choose the biggest file
 				if len(buff) > biggest {
 					biggest = len(buff)
 					result = buff
