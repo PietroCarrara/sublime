@@ -128,8 +128,18 @@ func getTargets(path string) ([]*sublime.FileTarget, error) {
 		for _, f := range files {
 			name := f.Name()
 
-			if videoRegex.MatchString(name) {
-				res = append(res, sublime.NewFileTarget(filepath.Join(path, name)))
+			if f.IsDir() {
+				// Recursively scan subdirectories
+				sub, err := getTargets(filepath.Join(path, name))
+				if err != nil {
+					return nil, err
+				}
+				res = append(res, sub...)
+			} else {
+				// If it's a file and matches the video regex...
+				if videoRegex.MatchString(name) {
+					res = append(res, sublime.NewFileTarget(filepath.Join(path, name)))
+				}
 			}
 		}
 		return res, nil
