@@ -20,6 +20,8 @@ func init() {
 	reGroup = regexp.MustCompile(`(?i)(- ?([^-\.\[ ]+(?:-={[^-]+-?$)?))`)
 	reRegion = regexp.MustCompile(`(?i)\bR[0-9]\b`)
 	reExtended = regexp.MustCompile(`(?i)\b(EXTENDED(:?.CUT)?)\b`)
+	reRemastered = regexp.MustCompile(`(?i)\bREMASTERED\b`)
+	reTheatrical = regexp.MustCompile(`(?i)\b(THEATRICAL(:?.CUT)?)\b`)
 	reDirectorsCut = regexp.MustCompile(`(?i)\b(?:(?:DC)|(?:DIRECTORS.CUT))\b`)
 	reHardcoded = regexp.MustCompile(`(?i)\bHC\b`)
 	reProper = regexp.MustCompile(`(?i)\bPROPER\b`)
@@ -47,6 +49,8 @@ var (
 	reGroup        *regexp.Regexp
 	reRegion       *regexp.Regexp
 	reExtended     *regexp.Regexp
+	reRemastered   *regexp.Regexp
+	reTheatrical   *regexp.Regexp
 	reDirectorsCut *regexp.Regexp
 	reHardcoded    *regexp.Regexp
 	reProper       *regexp.Regexp
@@ -76,6 +80,8 @@ type Information struct {
 	Group        string // Group responsible for the release. "" if none
 	Region       string // Media region. "" if none
 	Extended     bool   // Is the media a extended version?
+	Remastered   bool   // Is the media a remastered version?
+	Theatrical   bool   // Is the media a theatrical cut?
 	DirectorsCut bool   // Is the media director's cut version?
 	Hardcoded    bool   // Media has hardcoded pixels?
 	Proper       bool   // Media was re-released fixing problems in previous releases?
@@ -155,6 +161,12 @@ func Parse(str string) Information {
 	extendedMatch := reExtended.FindStringIndex(str)
 	res.Extended = extendedMatch != nil
 
+	remasteredMatch := reRemastered.FindStringIndex(str)
+	res.Remastered = remasteredMatch != nil
+
+	theatricalMatch := reTheatrical.FindStringIndex(str)
+	res.Theatrical = theatricalMatch != nil
+
 	directorsCutMatch := reDirectorsCut.FindStringIndex(str)
 	res.DirectorsCut = directorsCutMatch != nil
 
@@ -201,6 +213,8 @@ func Parse(str string) Information {
 		groupMatch,
 		regionMatch,
 		extendedMatch,
+		remasteredMatch,
+		theatricalMatch,
 		directorsCutMatch,
 		hardcodedMatch,
 		properMatch,

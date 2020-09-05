@@ -156,6 +156,28 @@ var testCases = map[string]Information{
 		AudioCodec:   "AAC",
 		Group:        "RARBG",
 	},
+	"E.T.The.Extra-Terrestrial.1982.1080p.BluRay.H264.AAC-RARBG.mp4": {
+		Title:      "E.T. The Extra-Terrestrial",
+		Year:       1982,
+		Resolution: "1080p",
+		Release:    "BluRay",
+		VideoCodec: "H264",
+		AudioCodec: "AAC",
+		Group:      "RARBG",
+		Container:  "mp4",
+	},
+	"Apocalypse.Now.1979.Theatrical.REMASTERED.1080p.BluRay.H264.AAC-RARBG.mp4": {
+		Title:      "Apocalypse Now",
+		Year:       1979,
+		Theatrical: true,
+		Remastered: true,
+		Resolution: "1080p",
+		Release:    "BluRay",
+		VideoCodec: "H264",
+		AudioCodec: "AAC",
+		Group:      "RARBG",
+		Container:  "mp4",
+	},
 }
 
 func TestParse(t *testing.T) {

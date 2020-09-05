@@ -229,6 +229,22 @@ func setConfig(config string) error {
 // greater returns wether A is a better match than B is
 // when compared to target
 func greater(target, a, b guessit.Information) bool {
+	if target.Extended == a.Extended && target.Extended != b.Extended {
+		return true
+	}
+
+	if target.Theatrical == a.Theatrical && target.Theatrical != b.Theatrical {
+		return true
+	}
+
+	if target.DirectorsCut == a.Theatrical && target.DirectorsCut != b.DirectorsCut {
+		return true
+	}
+
+	if target.Remastered == a.Remastered && target.Remastered != b.Remastered {
+		return true
+	}
+
 	if l(target.Release) == l(a.Release) && l(target.Release) != l(b.Release) {
 		return true
 	}
