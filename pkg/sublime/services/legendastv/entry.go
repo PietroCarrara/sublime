@@ -185,8 +185,12 @@ func (e mediaEntry) ListSubtitles(client *http.Client, typ subType, languageID i
 			})
 		})
 
-		// TODO: Check for the next page
-		break
+		// Check if there is a next page
+		if len(doc.Find(".load_more").Nodes) == 0 {
+			break
+		}
+
+		page++
 	}
 
 	return res, nil
