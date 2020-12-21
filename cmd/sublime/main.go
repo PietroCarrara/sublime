@@ -61,12 +61,20 @@ func main() {
 	count := 0
 	for sub := range channel {
 		count++
-		fmt.Printf("\rEvaluating %d subtitles...", count)
+
+		// If we're in a interactive shell
+		if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) != 0 {
+			fmt.Printf("\rEvaluating %d subtitles...", count)
+		}
 
 		f := sub.GetFileTarget()
 		if best[f] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f].GetInfo()) {
 			best[f] = sub
 		}
+	}
+	// If we're not in a interactive shell
+	if fileInfo, _ := os.Stdout.Stat(); (fileInfo.Mode() & os.ModeCharDevice) == 0 {
+		fmt.Printf("Evaluating %d subtitles...", count)
 	}
 	fmt.Println()
 
