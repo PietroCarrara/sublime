@@ -84,8 +84,8 @@ var testCases = map[string]Information{
 		AudioCodec: "AC3",
 		Group:      "POOP",
 	},
-	"Terminator.2.Judgement.Day.1991.Extended.REMASTERED.1080p.BluRay.H264.AAC.READ.NFO-RARBG": {
-		Title:      "Terminator 2 Judgement Day",
+	"Terminator.2.Judgment.Day.1991.Extended.REMASTERED.1080p.BluRay.H264.AAC.READ.NFO-RARBG": {
+		Title:      "Terminator 2 Judgment Day",
 		Year:       1991,
 		Extended:   true,
 		Resolution: "1080p",
