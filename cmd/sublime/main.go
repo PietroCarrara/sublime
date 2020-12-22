@@ -15,6 +15,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
 
+	"github.com/jeandeaual/go-locale"
+
 	// Implemented services:
 	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/legendastv"
 )
@@ -104,14 +106,20 @@ func getLanguages(langs string) []language.Tag {
 	})
 
 	var languages []language.Tag
-	if len(langList) > 0 {
-		languages = make([]language.Tag, len(langList))
-		for i, l := range langList {
-			languages[i] = language.MustParse(l)
+	if len(langList) == 0 {
+		loc, err := locale.GetLocales()
+		if err != nil {
+			log.Fatal(
+				"locale: could not determine the languages to download. " +
+					"Please, indicate a language using '-language=en-US'.",
+			)
 		}
-	} else {
-		// TODO: Use system locale
-		panic("not yet implemented!")
+		langList = loc
+	}
+
+	languages = make([]language.Tag, len(langList))
+	for i, l := range langList {
+		languages[i] = language.MustParse(l)
 	}
 
 	return languages

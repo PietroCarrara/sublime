@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -13,6 +14,7 @@ import (
 	"github.com/Jeffail/gabs/v2"
 	"github.com/PietroCarrara/sublime/pkg/guessit"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/agnivade/levenshtein"
 )
 
 type mediaType string
@@ -56,6 +58,8 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 		return nil, err
 	}
 
+	l := strings.ToLower
+
 	for _, obj := range obj.Children() {
 		data := map[string]string{
 			"id_filme":    "",
@@ -73,8 +77,11 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 			data[field] = value
 		}
 
-		// TODO: More forgiving way to match the title
-		if strings.ToLower(data["dsc_nome"]) == strings.ToLower(info.Title) || strings.ToLower(data["dsc_nome_br"]) == strings.ToLower(info.Title) {
+		thresh := int(math.Ceil(0.4 * float64(len(info.Title))))
+
+		if levenshtein.ComputeDistance(l(data["dsc_nome"]), l(info.Title)) < thresh ||
+			levenshtein.ComputeDistance(l(data["dsc_nome_br"]), l(info.Title)) < thresh {
+
 			entry, err := entryFromFields(data["id_filme"], data["dsc_nome"], data["temporada"], data["tipo"])
 			if err != nil {
 				log.Printf("legendastv: %s", err)
