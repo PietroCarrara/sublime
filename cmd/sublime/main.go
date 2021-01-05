@@ -275,6 +275,10 @@ func greater(target, a, b guessit.Information) bool {
 		return true
 	}
 
+	if countSimilarities(target.Rest, a.Rest) > countSimilarities(target.Rest, b.Rest) {
+		return true
+	}
+
 	// TODO: Better classification
 
 	return false
@@ -283,6 +287,21 @@ func greater(target, a, b guessit.Information) bool {
 // alias to strings.ToLower
 func l(s string) string {
 	return strings.ToLower(s)
+}
+
+func countSimilarities(a, b []string) int {
+	i := 0
+
+	for _, strA := range a {
+		for _, strB := range b {
+			if l(strA) == l(strB) {
+				i++
+				break
+			}
+		}
+	}
+
+	return i
 }
 
 func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.SubtitleCandidate {
