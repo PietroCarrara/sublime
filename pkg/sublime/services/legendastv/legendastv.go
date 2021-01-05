@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -53,7 +54,9 @@ var languagesTag = map[int]language.Tag{
 }
 
 func init() {
-	l := &LegendastvService{}
+	l := &LegendastvService{
+		retriesAllowed: 1,
+	}
 
 	sublime.Services[l.GetName()] = l
 }
@@ -61,6 +64,10 @@ func init() {
 type LegendastvService struct {
 	username string
 	password string
+
+	// number of retries allowed to retry a query to find
+	// the show/movie entry on the website
+	retriesAllowed int
 
 	session *http.Client
 }
@@ -76,6 +83,10 @@ func (l *LegendastvService) SetConfig(name, value string) error {
 		l.username = value
 	case "password":
 		l.password = value
+	case "retriesAllowed":
+		var err error
+		l.retriesAllowed, err = strconv.Atoi(value)
+		return err
 	default:
 		return fmt.Errorf(`option "%s" was not found`, name)
 	}
@@ -139,7 +150,7 @@ func (l *LegendastvService) GetCandidatesForFiles(files []*sublime.FileTarget, l
 		if id, ok := languagesID[lang]; ok {
 			for _, title := range titles {
 				wait.Add(1)
-				go downloadTitle(title, id, out, l.session, &wait)
+				go downloadTitle(title, id, out, l, &wait)
 			}
 		} else {
 			log.Printf(`legendastv: language "%s" is not supported`, lang)
@@ -156,7 +167,7 @@ func (l *LegendastvService) GetCandidatesForFiles(files []*sublime.FileTarget, l
 
 // downloadTitle downloads subtitles for all of the targets, as long as they
 // are from the same movie/tv show
-func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, l *LegendastvService, wait *sync.WaitGroup) {
 	seasons := make(map[int][]*sublime.FileTarget)
 	ourWait := sync.WaitGroup{}
 
@@ -164,7 +175,7 @@ func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.S
 		info := file.GetInfo()
 		if info.Season == 0 && info.Episode == 0 {
 			ourWait.Add(1)
-			go downloadLegendasTV([]*sublime.FileTarget{file}, langID, out, c, &ourWait)
+			go downloadLegendasTV([]*sublime.FileTarget{file}, langID, out, l, &ourWait)
 		} else if info.Season == 0 {
 			seasons[1] = append(seasons[1], file)
 		} else {
@@ -174,7 +185,7 @@ func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.S
 
 	for _, files := range seasons {
 		ourWait.Add(1)
-		go downloadLegendasTV(files, langID, out, c, &ourWait)
+		go downloadLegendasTV(files, langID, out, l, &ourWait)
 	}
 
 	ourWait.Wait()
@@ -183,7 +194,7 @@ func downloadTitle(files []*sublime.FileTarget, langID int, out chan<- sublime.S
 
 // downloadSeason downloads subtitles for many files, as long as they all
 // are from the same media in legendas.tv (a movie or a tv show season)
-func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, c *http.Client, wait *sync.WaitGroup) {
+func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- sublime.SubtitleCandidate, l *LegendastvService, wait *sync.WaitGroup) {
 	defer wait.Done()
 
 	ourWait := sync.WaitGroup{}
@@ -193,14 +204,24 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 		return
 	}
 
-	entries, err := getEntries(c, files[0].GetInfo())
+	var entries []*mediaEntry
+	var err error
+
+	for i := 0; i < l.retriesAllowed; i++ {
+		entries, err = getEntries(l.session, files[0].GetInfo())
+
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		log.Printf("legendastv: %s", err)
 		return
 	}
 
 	for _, entry := range entries {
-		subs, err := entry.ListSubtitles(c, subTypeAny, langID)
+		subs, err := entry.ListSubtitles(l.session, subTypeAny, langID)
 		if err != nil {
 			log.Printf("legendastv: Error while searching subtitles: %s", err)
 			return
@@ -212,10 +233,10 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 				var err error
 				switch subEntry.Type {
 				case subTypePack:
-					err = downloadSubPack(subEntry, c, out, files, langID)
+					err = downloadSubPack(subEntry, l, out, files, langID)
 				case subTypeHighlight:
 				case subTypeAny:
-					err = downloadSubEntry(subEntry, c, out, files, langID)
+					err = downloadSubEntry(subEntry, l, out, files, langID)
 				default:
 					err = fmt.Errorf("legendastv: Subtitle '%s' has an unknown type", subEntry.Title)
 				}
@@ -230,12 +251,12 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 
 // downloadSubPack Downloads a single subtitle pack for many files, as long as they all
 // are from the same media
-func downloadSubPack(entry subtitleEntry, c *http.Client, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
+func downloadSubPack(entry subtitleEntry, l *LegendastvService, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
 	pack := SubtitlePack{
 		entry: entry,
 	}
 
-	subs, err := pack.GetSubtitles(c)
+	subs, err := pack.GetSubtitles(l.session)
 	if err != nil {
 		return err
 	}
@@ -257,9 +278,9 @@ func downloadSubPack(entry subtitleEntry, c *http.Client, out chan<- sublime.Sub
 	return nil
 }
 
-func downloadSubEntry(entry subtitleEntry, c *http.Client, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
+func downloadSubEntry(entry subtitleEntry, l *LegendastvService, out chan<- sublime.SubtitleCandidate, files []*sublime.FileTarget, langID int) error {
 	sub := Subtitle{
-		c:        c,
+		c:        l.session,
 		subtitle: entry,
 		language: languagesTag[langID],
 	}
