@@ -157,7 +157,7 @@ var testCases = map[string]Information{
 		Group:        "RARBG",
 	},
 	"E.T.The.Extra-Terrestrial.1982.1080p.BluRay.H264.AAC-RARBG.mp4": {
-		Title:      "E.T. The Extra-Terrestrial",
+		Title:      "E T The Extra-Terrestrial",
 		Year:       1982,
 		Resolution: "1080p",
 		Release:    "BluRay",
