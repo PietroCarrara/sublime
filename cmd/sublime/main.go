@@ -21,6 +21,18 @@ import (
 	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/legendastv"
 )
 
+type releaseType int
+
+const (
+	bluray releaseType = iota
+	hdtv
+	cam
+	dvd
+	web
+
+	unknown
+)
+
 var argLangList = flag.String("language", "", "comma-separated language list for subtitles")
 var argServiceList = flag.String("service", "", "comma-separated service list for subtitles")
 var argConfigList = flag.String("config", "", `space-separated list of config values to set in the form service.option=my\ value`)
@@ -271,7 +283,7 @@ func greater(target, a, b guessit.Information) bool {
 		return true
 	}
 
-	if l(target.Release) == l(a.Release) && l(target.Release) != l(b.Release) {
+	if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
 		return true
 	}
 
@@ -279,14 +291,83 @@ func greater(target, a, b guessit.Information) bool {
 		return true
 	}
 
-	// TODO: Better classification
-
 	return false
 }
 
 // alias to strings.ToLower
 func l(s string) string {
 	return strings.ToLower(s)
+}
+
+// alias to parseRelease
+func p(s string) releaseType {
+	return parseRelease(s)
+}
+
+func parseRelease(t string) releaseType {
+	t = strings.ToLower(t)
+
+	switch t {
+	case "cam-rip",
+		"cam",
+		"hdcam":
+		return cam
+
+	case "dvdr",
+		"dvd-full",
+		"full-rip",
+		"iso rip",
+		"lossless rip",
+		"untouched rip",
+		"dvd-5",
+		"dvd-9":
+		return dvd
+
+	case "dsr",
+		"dsrip",
+		"satrip",
+		"dthrip",
+		"dvbrip",
+		"hdtv",
+		"pdtv",
+		"dtvrip",
+		"tvrip",
+		"hdtvrip":
+		return hdtv
+
+	case "webdl",
+		"web dl",
+		"web-dl",
+		"hdrip",
+		"web-dlrip",
+		"webrip",
+		"web rip",
+		"web-rip",
+		"web",
+		"web-cap",
+		"webcap",
+		"web cap",
+		"hc",
+		"hd-rip":
+		return web
+
+	case "blu-ray",
+		"bluray",
+		"bdrip",
+		"brip",
+		"brrip",
+		"bdmv",
+		"bdr",
+		"bd25",
+		"bd50",
+		"bd5",
+		"bd9":
+		return bluray
+
+	default:
+		log.Printf("main: unknown release type \"%s\"", t)
+		return unknown
+	}
 }
 
 func countSimilarities(a, b []string) int {
