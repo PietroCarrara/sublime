@@ -38,6 +38,8 @@ var argServiceList = flag.String("service", "", "comma-separated service list fo
 var argConfigList = flag.String("config", "", `space-separated list of config values to set in the form service.option=my\ value`)
 
 func main() {
+	log.SetFlags(log.Llongfile)
+
 	flag.Parse()
 
 	languages := getLanguages(*argLangList)
@@ -314,6 +316,7 @@ func parseRelease(t string) releaseType {
 		return cam
 
 	case "dvdr",
+		"dvdrip",
 		"dvd-full",
 		"full-rip",
 		"iso rip",
