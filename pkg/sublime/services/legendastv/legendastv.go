@@ -246,6 +246,10 @@ func downloadLegendasTV(files []*sublime.FileTarget, langID int, out chan<- subl
 				ourWait.Done()
 			}(subEntry)
 		}
+
+		if len(subs) > 0 {
+			break
+		}
 	}
 }
 

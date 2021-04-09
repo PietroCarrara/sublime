@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -42,6 +43,8 @@ type subtitleEntry struct {
 	Type  subType
 }
 
+// getEntries returns a list of possible candidates matching the given information
+// The first entries are likely to be the correct entry, while the last ones are not
 func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, error) {
 	res := []*mediaEntry{}
 
@@ -61,6 +64,7 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 	l := strings.ToLower
 
 	for _, obj := range obj.Children() {
+		var release int = 0
 		data := map[string]string{
 			"id_filme":    "",
 			"dsc_nome":    "",
@@ -76,18 +80,29 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 			}
 			data[field] = value
 		}
-
-		thresh := int(math.Ceil(0.4 * float64(len(info.Title))))
-
-		if levenshtein.ComputeDistance(l(data["dsc_nome"]), l(info.Title)) < thresh ||
-			levenshtein.ComputeDistance(l(data["dsc_nome_br"]), l(info.Title)) < thresh {
-
-			entry, err := entryFromFields(data["id_filme"], data["dsc_nome"], data["temporada"], data["tipo"])
-			if err != nil {
-				log.Printf("legendastv: %s", err)
-				continue
+		if value, ok := obj.Path("_source.dsc_data_lancamento").Data().(string); ok {
+			if date, err := strconv.Atoi(value); err == nil {
+				release = date
 			}
+		}
+		name := data["dsc_nome"]
+		if levenshtein.ComputeDistance(l(data["dsc_nome_br"]), l(info.Title)) < levenshtein.ComputeDistance(l(name), l(info.Title)) {
+			name = data["dsc_nome_br"]
+		}
 
+		entry, err := entryFromFields(data["id_filme"], name, data["temporada"], data["tipo"])
+		if err != nil {
+			log.Printf("legendastv: %s", err)
+			continue
+		}
+
+		if info.Season == 0 && entry.Season == 0 {
+			// If we're searching
+			if info.Year > 0 && release > 0 && math.Abs(float64(info.Year-release)) <= 1 {
+				res = append(res, entry)
+			}
+		} else {
+			// If we're searching for a show, only add matching seasons
 			if entry.Season == info.Season {
 				res = append(res, entry)
 			}
@@ -95,6 +110,14 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 	}
 
 	if len(res) > 0 {
+		// Sort by name proximity
+		sort.Slice(res, func(a, b int) bool {
+			dA := levenshtein.ComputeDistance(l(res[a].Title), l(info.Title))
+			dB := levenshtein.ComputeDistance(l(res[b].Title), l(info.Title))
+
+			return dA < dB
+		})
+
 		return res, nil
 	}
 
