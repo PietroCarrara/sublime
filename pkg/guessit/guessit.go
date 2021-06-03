@@ -14,7 +14,7 @@ func init() {
 	reEpisode = regexp.MustCompile(`(?i)([ex]([0-9]{2}))(?:[^0-9]|$)`)
 	reYear = regexp.MustCompile(`(?i)\b([\[\(]?(\d{4})[\]\)]?)\b`)
 	reResolution = regexp.MustCompile(`(?i)\b([0-9]{3,4}p)\b`)
-	reRelease = regexp.MustCompile(`(?i)\b((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|hdtv|telesync)\b`)
+	reRelease = regexp.MustCompile(`(?i)\b((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|Blu-ray|Blu Ray|DvDScr|hdtv|telesync)\b`)
 	reVideoCodec = regexp.MustCompile(`(?i)\b(xvid|[hx]\.?26[45])\b`)
 	reAudioCodec = regexp.MustCompile(`(?i)\b(MP3|DD5\.?1|Dual[\- ]Audio|LiNE|DTS|AAC[.-]LC|AAC(?:\.?2\.0)?|AC3(?:\.5\.1)?)\b`)
 	reGroup = regexp.MustCompile(`(?i)(- ?([^-\.\[ ]+(?:-={[^-]+-?$)?))`)
