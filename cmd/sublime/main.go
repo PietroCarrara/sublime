@@ -19,6 +19,7 @@ import (
 
 	// Implemented services:
 	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/legendastv"
+	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/opensubtitles"
 )
 
 type releaseType int
@@ -33,8 +34,8 @@ const (
 	unknown
 )
 
-var argLangList = flag.String("language", "", "comma-separated language list for subtitles")
-var argServiceList = flag.String("service", "", "comma-separated service list for subtitles")
+var argLangList = flag.String("languages", "", "comma-separated language list for subtitles")
+var argServiceList = flag.String("services", "", "comma-separated service list for subtitles")
 var argConfigList = flag.String("config", "", `space-separated list of config values to set in the form service.option=my\ value`)
 
 func main() {
@@ -106,7 +107,7 @@ func main() {
 				continue
 			}
 			defer stream.Close()
-			f.SaveSubtitle(stream, sub.GetLang())
+			f.SaveSubtitle(stream, sub.GetLang(), sub.GetFormatExtension())
 			fmt.Printf("%s: ✓\n", f)
 		} else {
 			fmt.Printf("%s: ✗\n", f)
@@ -356,6 +357,7 @@ func parseRelease(t string) releaseType {
 
 	case "blu-ray",
 		"bluray",
+		"blu ray",
 		"bdrip",
 		"brip",
 		"brrip",
@@ -368,7 +370,6 @@ func parseRelease(t string) releaseType {
 		return bluray
 
 	default:
-		log.Printf("main: unknown release type \"%s\"", t)
 		return unknown
 	}
 }
@@ -404,8 +405,8 @@ func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.S
 					totalOpenChannels--
 					if totalOpenChannels <= 0 {
 						close(res)
-						return
 					}
+					return
 				}
 			}
 		}()
