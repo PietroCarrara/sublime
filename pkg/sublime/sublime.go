@@ -50,16 +50,21 @@ func NewFileTarget(path string) *FileTarget {
 	}
 }
 
+// GetName returns the filename of the file (without any directories)
+func (f FileTarget) GetName() string {
+	_, name := path.Split(f.path)
+	return name
+}
+
 // GetInfo tries to extract information from a file
 func (f FileTarget) GetInfo() guessit.Information {
-	_, name := path.Split(f.path)
-	return guessit.Parse(name)
+	return guessit.Parse(f.GetName())
 }
 
 // SaveSubtitle saves a subtitle next to the video file
-func (f FileTarget) SaveSubtitle(r io.Reader, lang language.Tag) error {
+func (f FileTarget) SaveSubtitle(r io.Reader, lang language.Tag, format string) error {
 	name := strings.TrimSuffix(f.path, filepath.Ext(f.path))
-	name = fmt.Sprintf("%s.%s.%s", name, lang, "srt") // TODO: Don't assume srt format
+	name = fmt.Sprintf("%s.%s.%s", name, lang, format)
 
 	file, err := os.Create(name)
 	if err != nil {
