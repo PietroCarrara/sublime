@@ -97,8 +97,8 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 		}
 
 		if info.Season == 0 && entry.Season == 0 {
-			// If we're searching
-			if info.Year > 0 && release > 0 && math.Abs(float64(info.Year-release)) <= 1 {
+			// If we're searching for a movie, check for the release year
+			if info.Year == 0 || release == 0 || math.Abs(float64(info.Year-release)) <= 1 {
 				res = append(res, entry)
 			}
 		} else {

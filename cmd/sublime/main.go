@@ -60,16 +60,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	for _, s := range services {
+	for i, s := range services {
 		err := s.Initialize()
 		if err != nil {
-			log.Fatal(fmt.Errorf("%s: %s", s.GetName(), err))
+			log.Println(fmt.Errorf("%s: %s", s.GetName(), err))
+			services[i] = nil
 		}
 	}
 
 	chans := make([]<-chan sublime.SubtitleCandidate, len(services))
 	for i := range chans {
-		chans[i] = services[i].GetCandidatesForFiles(targets, languages)
+		if services[i] != nil {
+			chans[i] = services[i].GetCandidatesForFiles(targets, languages)
+		}
 	}
 
 	channel := unifyChannels(chans)
@@ -394,6 +397,10 @@ func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.S
 	totalOpenChannels := len(channels)
 
 	for _, c := range channels {
+		if c == nil {
+			totalOpenChannels--
+			continue
+		}
 		c := c
 		go func() {
 			for {
