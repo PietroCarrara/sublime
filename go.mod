@@ -9,9 +9,11 @@ require (
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/jeandeaual/go-locale v0.0.0-20201103012623-080c8de0f6f7 // indirect
+	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b // indirect
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mholt/archiver/v3 v3.3.0
 	github.com/nwaples/rardecode v1.1.0 // indirect
+	github.com/oz/osdb v0.0.0-20190204162748-da06ada9cdc1
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/ulikunitz/xz v0.5.7 // indirect

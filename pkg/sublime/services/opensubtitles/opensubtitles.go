@@ -3,25 +3,32 @@ package opensubtitles
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/PietroCarrara/sublime/pkg/guessit"
 	"github.com/PietroCarrara/sublime/pkg/sublime"
+	"github.com/oz/osdb"
 	"golang.org/x/text/language"
 )
 
+var langToISO639 = map[language.Tag]string{
+	language.BrazilianPortuguese: "pob",
+}
+
 type OpenSubtitles struct {
-	c        *Client
+	c        *osdb.Client
 	key      string
 	username string
 	password string
 }
 
 type OpenSubtitlesSubtitle struct {
-	s Subtitle
+	s osdb.Subtitle
 	t *sublime.FileTarget
-	c *Client
+	c *osdb.Client
 }
 
 func init() {
@@ -37,7 +44,12 @@ func (o *OpenSubtitles) GetName() string {
 func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs []language.Tag) <-chan sublime.SubtitleCandidate {
 	langsString := make([]string, len(langs))
 	for i, lang := range langs {
-		langsString[i] = lang.String()
+		if iso639, ok := langToISO639[lang]; ok {
+			langsString[i] = iso639
+		} else {
+			l, _ := lang.Base()
+			langsString[i] = l.ISO3()
+		}
 	}
 	langList := strings.Join(langsString, ",")
 
@@ -45,32 +57,28 @@ func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs
 	go func() {
 		// Loop over every file
 		for _, file := range files {
-			page := 1
-			// Loop over every page
-			for {
-				res, err := o.c.GetSubtitles(SubtitlesArgs{
-					Query:     file.GetName(),
-					Languages: langList,
-					Page:      page,
-				})
-				if err != nil {
-					log.Printf("opensubtitles: %s\n", err)
-					break
-				}
+			args := map[string]string{
+				"query":         file.GetName(),
+				"sublanguageid": langList,
+			}
+			params := []interface{}{
+				o.c.Token,
+				[]map[string]string{args},
+			}
+			res, err := o.c.SearchSubtitles(&params)
+			if err != nil {
+				log.Printf("opensubtitles: %s\n", err)
+				// Go to the next file
+				continue
+			}
 
-				for _, sub := range res.Data {
-					candidate := OpenSubtitlesSubtitle{
-						s: sub,
-						t: file,
-						c: o.c,
-					}
-					channel <- candidate
+			for _, sub := range res {
+				candidate := OpenSubtitlesSubtitle{
+					s: sub,
+					t: file,
+					c: o.c,
 				}
-
-				if page >= res.TotalPages {
-					break
-				}
-				page++
+				channel <- candidate
 			}
 		}
 		close(channel)
@@ -95,11 +103,13 @@ func (o *OpenSubtitles) SetConfig(name, value string) error {
 }
 
 func (o *OpenSubtitles) Initialize() error {
-	o.c = NewClient(o.key)
+	c, err := osdb.NewClient()
+	if err != nil {
+		return err
+	}
+	o.c = c
 
-	// TODO: Login
-
-	return nil
+	return o.c.LogIn(o.username, o.password, "")
 }
 
 func (s OpenSubtitlesSubtitle) GetFormatExtension() string {
@@ -112,13 +122,32 @@ func (s OpenSubtitlesSubtitle) GetFileTarget() *sublime.FileTarget {
 }
 
 func (s OpenSubtitlesSubtitle) GetLang() language.Tag {
-	return language.Make(s.s.Attributes.Language)
+	for lang, iso639 := range langToISO639 {
+		if iso639 == s.s.ISO639 {
+			return lang
+		}
+	}
+
+	return language.Make(s.s.ISO639)
 }
 
 func (s OpenSubtitlesSubtitle) GetInfo() guessit.Information {
-	return guessit.Parse(s.s.Attributes.Release)
+	return guessit.Parse(s.s.SubFileName)
 }
 
 func (s OpenSubtitlesSubtitle) Open() (io.ReadCloser, error) {
-	return s.c.GetDownload(s.s)
+	// TODO: Rework the library so we don't have to do this disk operation
+	tmpFile, err := ioutil.TempFile(os.TempDir(), "sublime-opensubtitles-")
+	if err != nil {
+		return nil, err
+	}
+	filename := tmpFile.Name()
+	tmpFile.Close()
+
+	err = s.c.DownloadTo(&s.s, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return os.Open(filename)
 }
