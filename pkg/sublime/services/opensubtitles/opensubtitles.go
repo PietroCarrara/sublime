@@ -14,8 +14,8 @@ import (
 	"golang.org/x/text/language"
 )
 
-var langToISO639 = map[language.Tag]string{
-	language.BrazilianPortuguese: "pob",
+var langToISO639 = map[language.Tag][]string{
+	language.BrazilianPortuguese: {"pob", "pb"},
 }
 
 type OpenSubtitles struct {
@@ -45,7 +45,7 @@ func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs
 	langsString := make([]string, len(langs))
 	for i, lang := range langs {
 		if iso639, ok := langToISO639[lang]; ok {
-			langsString[i] = iso639
+			langsString[i] = iso639[0]
 		} else {
 			l, _ := lang.Base()
 			langsString[i] = l.ISO3()
@@ -122,9 +122,11 @@ func (s OpenSubtitlesSubtitle) GetFileTarget() *sublime.FileTarget {
 }
 
 func (s OpenSubtitlesSubtitle) GetLang() language.Tag {
-	for lang, iso639 := range langToISO639 {
-		if iso639 == s.s.ISO639 {
-			return lang
+	for lang, values := range langToISO639 {
+		for _, iso639 := range values {
+			if iso639 == s.s.ISO639 {
+				return lang
+			}
 		}
 	}
 
