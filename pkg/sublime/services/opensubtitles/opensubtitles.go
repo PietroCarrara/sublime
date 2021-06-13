@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/PietroCarrara/sublime/pkg/guessit"
@@ -20,7 +21,6 @@ var langToISO639 = map[language.Tag][]string{
 
 type OpenSubtitles struct {
 	c        *osdb.Client
-	key      string
 	username string
 	password string
 }
@@ -73,6 +73,13 @@ func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs
 			}
 
 			for _, sub := range res {
+				// Check if seasons match
+				if season := file.GetInfo().Season; season != 0 {
+					if sub.SeriesSeason != strconv.Itoa(season) {
+						continue
+					}
+				}
+
 				candidate := OpenSubtitlesSubtitle{
 					s: sub,
 					t: file,
@@ -89,8 +96,6 @@ func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs
 
 func (o *OpenSubtitles) SetConfig(name, value string) error {
 	switch name {
-	case "key":
-		o.key = value
 	case "username":
 		o.username = value
 	case "password":

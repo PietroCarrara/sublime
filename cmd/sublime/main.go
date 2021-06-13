@@ -273,24 +273,40 @@ func setConfig(config string) error {
 // greater returns wether A is a better match than B is
 // when compared to target
 func greater(target, a, b guessit.Information) bool {
+	// Release type is the greatest factor
+	if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
+		return true
+	}
+	if p(target.Release) == p(b.Release) && p(target.Release) != p(a.Release) {
+		return false
+	}
+
 	if target.Extended == a.Extended && target.Extended != b.Extended {
 		return true
+	}
+	if target.Extended == b.Extended && target.Extended != a.Extended {
+		return false
 	}
 
 	if target.Theatrical == a.Theatrical && target.Theatrical != b.Theatrical {
 		return true
 	}
+	if target.Theatrical == b.Theatrical && target.Theatrical != a.Theatrical {
+		return false
+	}
 
 	if target.DirectorsCut == a.Theatrical && target.DirectorsCut != b.DirectorsCut {
 		return true
+	}
+	if target.DirectorsCut == b.Theatrical && target.DirectorsCut != a.DirectorsCut {
+		return false
 	}
 
 	if target.Remastered == a.Remastered && target.Remastered != b.Remastered {
 		return true
 	}
-
-	if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
-		return true
+	if target.Remastered == b.Remastered && target.Remastered != a.Remastered {
+		return false
 	}
 
 	if countSimilarities(target.Rest, a.Rest) > countSimilarities(target.Rest, b.Rest) {
