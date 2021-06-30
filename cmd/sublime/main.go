@@ -77,7 +77,7 @@ func main() {
 
 	channel := unifyChannels(chans)
 
-	best := make(map[*sublime.FileTarget]sublime.SubtitleCandidate)
+	best := make(map[*sublime.FileTarget]map[language.Tag]sublime.SubtitleCandidate)
 	count := 0
 	for sub := range channel {
 		count++
@@ -88,8 +88,12 @@ func main() {
 		}
 
 		f := sub.GetFileTarget()
-		if best[f] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f].GetInfo()) {
-			best[f] = sub
+		l := sub.GetLang()
+		if best[f] == nil {
+			best[f] = make(map[language.Tag]sublime.SubtitleCandidate)
+		}
+		if best[f][l] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f][l].GetInfo()) {
+			best[f][l] = sub
 		}
 	}
 	// If we're not in a interactive shell
@@ -99,21 +103,23 @@ func main() {
 	fmt.Println()
 
 	for _, f := range targets {
-		if sub, ok := best[f]; ok {
-			stream, err := sub.Open()
-			if err != nil {
-				log.Printf(`could not download subtitle for "%s": %s`, f, err)
-				if stream != nil {
-					stream.Close()
+		for _, l := range languages {
+			if sub, ok := best[f][l]; ok {
+				stream, err := sub.Open()
+				if err != nil {
+					log.Printf(`could not download subtitle for "%s": %s`, f, err)
+					if stream != nil {
+						stream.Close()
+					}
+					fmt.Printf("%s: ✗\n", f)
+					continue
 				}
-				fmt.Printf("%s: ✗\n", f)
-				continue
+				defer stream.Close()
+				f.SaveSubtitle(stream, sub.GetLang(), sub.GetFormatExtension())
+				fmt.Printf("%s [%s]: ✓\n", f, l)
+			} else {
+				fmt.Printf("%s [%s]: ✗\n", f, l)
 			}
-			defer stream.Close()
-			f.SaveSubtitle(stream, sub.GetLang(), sub.GetFormatExtension())
-			fmt.Printf("%s: ✓\n", f)
-		} else {
-			fmt.Printf("%s: ✗\n", f)
 		}
 	}
 }
