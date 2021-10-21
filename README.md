@@ -16,7 +16,7 @@ service interface and register it. Reading [opensubtitles.go](pkg/sublime/servic
 func init() {
     s := &MyCoolService{}
 
-    sublime.Services[o.GetName()] = s
+    sublime.Services[s.GetName()] = s
 }
 
 // Service knows how to get candidates for FileTargets and Languages
