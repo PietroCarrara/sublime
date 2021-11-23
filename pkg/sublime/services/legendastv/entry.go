@@ -47,9 +47,9 @@ type subtitleEntry struct {
 // The first entries are likely to be the correct entry, while the last ones are not
 func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, error) {
 	res := []*mediaEntry{}
+	l := strings.ToLower
 
-	title := url.PathEscape(clearTitle(info.Title))
-
+	title := url.PathEscape(l(info.Title))
 	r, err := client.Get(fmt.Sprintf("http://legendas.tv/legenda/sugestao/%s", title))
 	if err != nil {
 		return nil, err
@@ -60,8 +60,6 @@ func getEntries(client *http.Client, info guessit.Information) ([]*mediaEntry, e
 	if err != nil {
 		return nil, err
 	}
-
-	l := strings.ToLower
 
 	for _, obj := range obj.Children() {
 		var release int = 0
@@ -247,11 +245,4 @@ func (s subtitleEntry) DownloadContents(c *http.Client) (io.ReadCloser, error) {
 	}
 
 	return r.Body, nil
-}
-
-func clearTitle(title string) string {
-	// "Stop Words" that should be removed
-	reg := regexp.MustCompile("(^| )(and|&)($| )")
-
-	return strings.Trim(reg.ReplaceAllString(title, " "), " ")
 }
