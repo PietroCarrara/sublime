@@ -12,6 +12,7 @@ import (
 
 	"github.com/PietroCarrara/sublime/pkg/guessit"
 	"github.com/PietroCarrara/sublime/pkg/sublime"
+	"github.com/agnivade/levenshtein"
 	"github.com/pkg/errors"
 	"golang.org/x/text/language"
 
@@ -279,6 +280,10 @@ func setConfig(config string) error {
 // greater returns wether A is a better match than B is
 // when compared to target
 func greater(target, a, b guessit.Information) bool {
+	distance := func(a, b string) int {
+		return levenshtein.ComputeDistance(strings.ToLower(a), strings.ToLower(b))
+	}
+
 	// Release type is the greatest factor
 	if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
 		return true
@@ -315,16 +320,11 @@ func greater(target, a, b guessit.Information) bool {
 		return false
 	}
 
-	if countSimilarities(target.Rest, a.Rest) > countSimilarities(target.Rest, b.Rest) {
+	if distance(target.Title, a.Title) < distance(target.Title, b.Title) {
 		return true
 	}
 
 	return false
-}
-
-// alias to strings.ToLower
-func l(s string) string {
-	return strings.ToLower(s)
 }
 
 // alias to parseRelease
@@ -397,21 +397,6 @@ func parseRelease(t string) releaseType {
 	default:
 		return unknown
 	}
-}
-
-func countSimilarities(a, b []string) int {
-	i := 0
-
-	for _, strA := range a {
-		for _, strB := range b {
-			if l(strA) == l(strB) {
-				i++
-				break
-			}
-		}
-	}
-
-	return i
 }
 
 func unifyChannels(channels []<-chan sublime.SubtitleCandidate) <-chan sublime.SubtitleCandidate {
