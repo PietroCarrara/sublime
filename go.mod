@@ -3,20 +3,22 @@ module github.com/PietroCarrara/sublime
 go 1.14
 
 require (
-	github.com/Jeffail/gabs/v2 v2.5.1
-	github.com/PuerkitoBio/goquery v1.5.1
-	github.com/agnivade/levenshtein v1.1.0
-	github.com/dsnet/compress v0.0.1 // indirect
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/jeandeaual/go-locale v0.0.0-20201103012623-080c8de0f6f7 // indirect
+	github.com/Jeffail/gabs/v2 v2.6.1
+	github.com/PuerkitoBio/goquery v1.8.0
+	github.com/agnivade/levenshtein v1.1.1
+	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/golang/snappy v0.0.4 // indirect
+	github.com/jeandeaual/go-locale v0.0.0-20211014152413-b809787f45c8
+	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/kolo/xmlrpc v0.0.0-20201022064351-38db28db192b // indirect
-	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/mholt/archiver/v3 v3.3.0
-	github.com/nwaples/rardecode v1.1.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/mholt/archiver/v3 v3.5.1
+	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/oz/osdb v0.0.0-20190204162748-da06ada9cdc1
-	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
+	github.com/pierrec/lz4/v4 v4.1.11 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/ulikunitz/xz v0.5.7 // indirect
-	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
-	golang.org/x/text v0.3.4
+	github.com/ulikunitz/xz v0.5.10 // indirect
+	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
+	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/text v0.3.7
 )
