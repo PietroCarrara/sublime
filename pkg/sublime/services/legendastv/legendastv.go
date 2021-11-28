@@ -15,6 +15,8 @@ import (
 	"golang.org/x/text/language"
 )
 
+const name = "legendastv"
+
 var languagesID = map[language.Tag]int{
 	language.BrazilianPortuguese: 1,
 	language.English:             2,
@@ -73,7 +75,7 @@ type LegendastvService struct {
 }
 
 func (l *LegendastvService) GetName() string {
-	return "legendastv"
+	return name
 }
 
 func (l *LegendastvService) SetConfig(name, value string) error {

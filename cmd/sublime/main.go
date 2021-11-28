@@ -93,8 +93,11 @@ func main() {
 		if best[f] == nil {
 			best[f] = make(map[language.Tag]sublime.SubtitleCandidate)
 		}
-		if best[f][l] == nil || greater(f.GetInfo(), sub.GetInfo(), best[f][l].GetInfo()) {
+		if best[f][l] == nil || greater(f.GetInfo(), sub, best[f][l]) {
 			best[f][l] = sub
+			log.Printf("\"%s\" wins against \"%s\"\n", sub.GetInfo().Title, best[f][l].GetInfo().Title)
+		} else if best[f][l] != nil {
+			log.Printf("\"%s\" wins against \"%s\"\n", best[f][l].GetInfo().Title, sub.GetInfo().Title)
 		}
 	}
 	// If we're not in a interactive shell
@@ -279,17 +282,22 @@ func setConfig(config string) error {
 
 // greater returns wether A is a better match than B is
 // when compared to target
-func greater(target, a, b guessit.Information) bool {
+func greater(target guessit.Information, subA, subB sublime.SubtitleCandidate) bool {
+	a := subA.GetInfo()
+	b := subB.GetInfo()
+
 	distance := func(a, b string) int {
 		return levenshtein.ComputeDistance(strings.ToLower(a), strings.ToLower(b))
 	}
 
-	// Release type is the greatest factor
-	if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
-		return true
-	}
-	if p(target.Release) == p(b.Release) && p(target.Release) != p(a.Release) {
-		return false
+	// Release type is the greatest factor, if the target is not a specific version
+	if !target.Extended && !target.DirectorsCut && !target.Theatrical {
+		if p(target.Release) == p(a.Release) && p(target.Release) != p(b.Release) {
+			return true
+		}
+		if p(target.Release) == p(b.Release) && p(target.Release) != p(a.Release) {
+			return false
+		}
 	}
 
 	if target.Extended == a.Extended && target.Extended != b.Extended {
@@ -318,6 +326,14 @@ func greater(target, a, b guessit.Information) bool {
 	}
 	if target.Remastered == b.Remastered && target.Remastered != a.Remastered {
 		return false
+	}
+
+	if subA.GetService() == subB.GetService() {
+		if subA.GetRanking() > subB.GetRanking() {
+			return true
+		} else if subA.GetRanking() < subB.GetRanking() {
+			return false
+		}
 	}
 
 	if distance(target.Title, a.Title) < distance(target.Title, b.Title) {

@@ -21,6 +21,8 @@ type SubtitleCandidate interface {
 	GetFormatExtension() string   // Returns the format extension for this subtitle type (eg. "srt", "ass")
 	GetFileTarget() *FileTarget   // The file this subtitle is targeting
 	GetLang() language.Tag        // The language of this subtitle
+	GetService() string           // The service that this subtitle was found on
+	GetRanking() float32          // A metric inner to the site that ranks subtitles, the higher the better (like a user star rating or number of downloads, for example)
 	GetInfo() guessit.Information // Return info about this subtitle
 	Open() (io.ReadCloser, error) // Get a stream to the subtitle used for downloading
 }

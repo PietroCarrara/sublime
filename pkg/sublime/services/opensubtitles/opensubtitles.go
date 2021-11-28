@@ -15,6 +15,8 @@ import (
 	"golang.org/x/text/language"
 )
 
+const name = "opensubtitles"
+
 var langToISO639 = map[language.Tag][]string{
 	language.BrazilianPortuguese: {"pob", "pb"},
 }
@@ -38,20 +40,20 @@ func init() {
 }
 
 func (o *OpenSubtitles) GetName() string {
-	return "opensubtitles"
+	return name
 }
 
 func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs []language.Tag) <-chan sublime.SubtitleCandidate {
-	langsString := make([]string, len(langs))
+	langList := make([]string, len(langs))
 	for i, lang := range langs {
 		if iso639, ok := langToISO639[lang]; ok {
-			langsString[i] = iso639[0]
+			langList[i] = iso639[0]
 		} else {
 			l, _ := lang.Base()
-			langsString[i] = l.ISO3()
+			langList[i] = l.ISO3()
 		}
 	}
-	langList := strings.Join(langsString, ",")
+	langsString := strings.Join(langList, ",")
 
 	channel := make(chan sublime.SubtitleCandidate)
 	go func() {
@@ -59,7 +61,7 @@ func (o *OpenSubtitles) GetCandidatesForFiles(files []*sublime.FileTarget, langs
 		for _, file := range files {
 			args := map[string]string{
 				"query":         file.GetName(),
-				"sublanguageid": langList,
+				"sublanguageid": langsString,
 			}
 			params := []interface{}{
 				o.c.Token,
@@ -120,6 +122,18 @@ func (o *OpenSubtitles) Initialize() error {
 func (s OpenSubtitlesSubtitle) GetFormatExtension() string {
 	// We always download srt subtitles
 	return "srt"
+}
+
+func (s OpenSubtitlesSubtitle) GetService() string {
+	return name
+}
+
+func (s OpenSubtitlesSubtitle) GetRanking() float32 {
+	cnt, err := strconv.Atoi(s.s.SubDownloadsCnt)
+	if err != nil {
+		return 0
+	}
+	return float32(cnt)
 }
 
 func (s OpenSubtitlesSubtitle) GetFileTarget() *sublime.FileTarget {

@@ -135,6 +135,17 @@ func (s SubtitlePackItem) GetLang() language.Tag {
 	return s.language
 }
 
+// GetService returns this service's name
+func (s SubtitlePackItem) GetService() string {
+	return name
+}
+
+// GetRanking returns the download cound for this subtitle
+func (s SubtitlePackItem) GetRanking() float32 {
+	// TODO: Return download count
+	return 0
+}
+
 // GetInfo parses this subtitle's name for information
 func (s SubtitlePackItem) GetInfo() guessit.Information {
 	parentInfo := s.pack.GetInfo()
@@ -156,6 +167,17 @@ func (s SubtitlePackItem) GetInfo() guessit.Information {
 // Open returns this subtitle's contents as a stream
 func (s SubtitlePackItem) Open() (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(s.contents)), nil
+}
+
+// GetService returns this service's name
+func (s Subtitle) GetService() string {
+	return name
+}
+
+// GetRanking returns the download cound for this subtitle
+func (s Subtitle) GetRanking() float32 {
+	// TODO: Return user rating or download count
+	return 0
 }
 
 // GetFormatExtension returns "srt" (I don't think legendas.tv supports any other subtitle type)
