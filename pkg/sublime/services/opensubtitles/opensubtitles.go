@@ -3,9 +3,7 @@ package opensubtitles
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 
@@ -157,18 +155,13 @@ func (s OpenSubtitlesSubtitle) GetInfo() guessit.Information {
 }
 
 func (s OpenSubtitlesSubtitle) Open() (io.ReadCloser, error) {
-	// TODO: Rework the library so we don't have to do this disk operation
-	tmpFile, err := ioutil.TempFile(os.TempDir(), "sublime-opensubtitles-")
+	subs, err := s.c.DownloadSubtitles(osdb.Subtitles{s.s})
 	if err != nil {
 		return nil, err
 	}
-	filename := tmpFile.Name()
-	tmpFile.Close()
-
-	err = s.c.DownloadTo(&s.s, filename)
-	if err != nil {
-		return nil, err
+	if len(subs) == 0 {
+		return nil, fmt.Errorf("opensubtitles: Could not download subtitle")
 	}
 
-	return os.Open(filename)
+	return subs[0].Reader()
 }

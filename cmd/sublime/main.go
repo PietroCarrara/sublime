@@ -95,9 +95,6 @@ func main() {
 		}
 		if best[f][l] == nil || greater(f.GetInfo(), sub, best[f][l]) {
 			best[f][l] = sub
-			log.Printf("\"%s\" wins against \"%s\"\n", sub.GetInfo().Title, best[f][l].GetInfo().Title)
-		} else if best[f][l] != nil {
-			log.Printf("\"%s\" wins against \"%s\"\n", best[f][l].GetInfo().Title, sub.GetInfo().Title)
 		}
 	}
 	// If we're not in a interactive shell
