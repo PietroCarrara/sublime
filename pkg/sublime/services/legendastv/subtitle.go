@@ -196,7 +196,6 @@ func (s Subtitle) GetLang() language.Tag {
 }
 
 // GetInfo parses this subtitle's name for information
-// TODO: Inherit some of the pack's info, such as release type
 func (s Subtitle) GetInfo() guessit.Information {
 	return guessit.Parse(s.subtitle.Title)
 }
