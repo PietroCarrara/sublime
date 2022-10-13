@@ -38,6 +38,7 @@ const (
 var argLangList = flag.String("languages", "", "comma-separated language list for subtitles")
 var argServiceList = flag.String("services", "", "comma-separated service list for subtitles")
 var argConfigList = flag.String("config", "", `space-separated list of config values to set in the form service.option=my\ value`)
+var argLangNames = flag.String("lnames", "", "comma-separated list of languages to rename in the output (example: pt-Br=pt)")
 
 func main() {
 	log.SetFlags(log.Llongfile)
@@ -45,6 +46,10 @@ func main() {
 	flag.Parse()
 
 	languages := getLanguages(*argLangList)
+	lnames, err := getLangNames(languages, *argLangNames)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	targets, err := getTargets(flag.Arg(flag.NArg() - 1))
 	if err != nil {
@@ -115,8 +120,8 @@ func main() {
 					fmt.Printf("%s: ✗\n", f)
 					continue
 				}
-				defer stream.Close()
-				f.SaveSubtitle(stream, sub.GetLang(), sub.GetFormatExtension())
+				f.SaveSubtitle(stream, lnames[sub.GetLang()], sub.GetFormatExtension())
+				stream.Close()
 				fmt.Printf("%s [%s]: ✓\n", f, l)
 			} else {
 				fmt.Printf("%s [%s]: ✗\n", f, l)
@@ -150,7 +155,30 @@ func getLanguages(langs string) []language.Tag {
 	return languages
 }
 
-var videoRegex = regexp.MustCompile(`(?i)(mkv|avi|mp4)$`)
+func getLangNames(langs []language.Tag, lnames string) (map[language.Tag]string, error) {
+	res := make(map[language.Tag]string)
+
+	for _, l := range langs {
+		res[l] = l.String()
+	}
+
+	if len(lnames) == 0 {
+		return res, nil
+	}
+
+	for _, i := range strings.Split(lnames, ",") {
+		parts := strings.Split(i, "=")
+		if len(parts) != 2 {
+			return nil, errors.Errorf(`invalid expression "%s"`, i)
+		}
+		lang := language.MustParse(parts[0])
+		res[lang] = parts[1]
+	}
+
+	return res, nil
+}
+
+var videoRegex = regexp.MustCompile(`(?i)(wmv|mov|webm|mkv|avi|mp4)$`)
 
 func getTargets(path string) ([]*sublime.FileTarget, error) {
 	stat, err := os.Stat(path)

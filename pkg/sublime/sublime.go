@@ -64,7 +64,7 @@ func (f FileTarget) GetInfo() guessit.Information {
 }
 
 // SaveSubtitle saves a subtitle next to the video file
-func (f FileTarget) SaveSubtitle(r io.Reader, lang language.Tag, format string) error {
+func (f FileTarget) SaveSubtitle(r io.Reader, lang string, format string) error {
 	name := strings.TrimSuffix(f.path, filepath.Ext(f.path))
 	name = fmt.Sprintf("%s.%s.%s", name, lang, format)
 
