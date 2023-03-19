@@ -5,7 +5,7 @@ Golang subtitles downloader
 `$ sublime -config 'opensubtitles.username=user opensubtitles.password=pass legendastv.username=user legendastv.password=pass legendastv.retriesAllowed=10' -languages pt-Br,en 'Squid.Game.S01.KOREAN.WEBRip.x264-ION10/'`
 
 This command will download subtitles for all the files inside the *Squid Game* directory, in brazilian portuguese and english.
-Since no services were specified (with `-services legendastv,opensubtitles,...`), it'll use all the available ones (OpenSubtitles and LegendasTV, for now).
+Since no services were specified (with `-services opensubtitles,service2,...`), it'll use all the available ones (only OpenSubtitles for now).
 
 ## Extending
 

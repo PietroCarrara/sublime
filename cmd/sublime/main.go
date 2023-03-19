@@ -19,7 +19,6 @@ import (
 	"github.com/jeandeaual/go-locale"
 
 	// Implemented services:
-	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/legendastv"
 	_ "github.com/PietroCarrara/sublime/pkg/sublime/services/opensubtitles"
 )
 
