@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -155,13 +156,11 @@ func (s OpenSubtitlesSubtitle) GetInfo() guessit.Information {
 }
 
 func (s OpenSubtitlesSubtitle) Open() (io.ReadCloser, error) {
-	subs, err := s.c.DownloadSubtitles(osdb.Subtitles{s.s})
+	url := "https://subs5.strem.io/en/download/subencoding-stremio-utf8/src-api/file/" + s.s.IDSubtitleFile
+	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	if len(subs) == 0 {
-		return nil, fmt.Errorf("opensubtitles: Could not download subtitle")
-	}
 
-	return subs[0].Reader()
+	return res.Body, nil
 }
